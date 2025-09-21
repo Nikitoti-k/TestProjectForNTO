@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
-
+// Класс уникального здания штаб - цели врагов
 public class Headquarters : BuildingBase
 {
     private List<HexCoord> occupiedCoords = new List<HexCoord>(); 

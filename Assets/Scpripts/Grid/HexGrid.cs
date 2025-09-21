@@ -41,7 +41,7 @@ public class HexGrid : MonoBehaviour, IGrid
             RegenerateGrid();
         }
 
-        // Размещаем штаб, если его нет
+        
         if (headquarters == null && headquartersPrefab != null && Application.isPlaying)
         {
             PlaceHeadquarters();
@@ -103,7 +103,7 @@ public class HexGrid : MonoBehaviour, IGrid
                 HexCoord coord = new HexCoord(q, r);
                 Vector3 worldPos = CoordToWorldPos(coord);
                 cells.Add(coord, new HexCell(coord, worldPos));
-                Debug.Log($"Клетка: q={q}, r={r}, pos={worldPos}");
+              //  Debug.Log($"Клетка: q={q}, r={r}, pos={worldPos}");
             }
         }
        

@@ -1,13 +1,14 @@
 using UnityEngine;
-// Первое здание - турель, соотвесвенно добавил ей всё что присуще зданию турели: урон, скорострельность, дальность. Цифры берём из базы данных (TurretData)
+// первая башня - турель
 public class Turret : BuildingBase
 {
     [SerializeField] private TurretData data;
+    [SerializeField] private LayerMask enemyLayer;
+    [SerializeField] private Transform projectileSpawnPoint;
 
     private int currentLevel = 0;
     private float nextFireTime = 0f;
-
-    private Transform target;
+    private EnemyBase currentTarget;
     private float currentDamage;
     private float currentFireRate;
     private float currentRange;
@@ -23,16 +24,40 @@ public class Turret : BuildingBase
 
     private void Update()
     {
-        if (target != null && Time.time >= nextFireTime)
+        if (data == null) return;
+
+        if (currentTarget != null)
         {
-            Attack();
-            nextFireTime = Time.time + (1f / currentFireRate);
+            if (Vector3.Distance(transform.position, currentTarget.transform.position) <= currentRange && currentTarget.gameObject.activeInHierarchy)
+            {
+                if (Time.time >= nextFireTime)
+                {
+                    Attack();
+                    nextFireTime = Time.time + (1f / currentFireRate);
+                }
+            }
+            else
+            {
+                currentTarget = null;
+            }
+        }
+        else
+        {
+            FindTarget();
         }
     }
 
     private void Attack()
     {
-        
+        if (currentTarget == null || !currentTarget.gameObject.activeInHierarchy || ProjectilePool.Instance == null)
+        {
+            return; 
+        }
+
+        TurretProjectile projectile = ProjectilePool.Instance.GetProjectile();
+        projectile.transform.position = projectileSpawnPoint != null ? projectileSpawnPoint.position : transform.position;
+        projectile.Initialize(currentTarget, currentDamage);
+        Debug.Log($"Turret fires at {currentTarget.name} for {currentDamage} damage");
     }
 
     public void Upgrade()
@@ -52,11 +77,17 @@ public class Turret : BuildingBase
         currentRange = levelData.Range;
     }
 
-    public void SetTarget(Transform newTarget)
+    private void FindTarget()
     {
-        if (newTarget != null && Vector3.Distance(transform.position, newTarget.position) <= currentRange)
+        Collider[] hits = Physics.OverlapSphere(transform.position, currentRange, enemyLayer);
+        foreach (var hit in hits)
         {
-            target = newTarget;
+            EnemyBase enemy = hit.GetComponent<EnemyBase>();
+            if (enemy != null && enemy.gameObject.activeInHierarchy)
+            {
+                currentTarget = enemy;
+                return;
+            }
         }
     }
 }
