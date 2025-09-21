@@ -1,29 +1,17 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public interface IGrid
-{
-    HexCell GetCellFromWorldPos(Vector3 worldPos);
-    bool IsCellFree(HexCoord coord);
-    void PlaceBuilding(HexCoord coord, BuildingBase building);
-    Vector3 GetWorldPosFromCoord(HexCoord coord);
-}
+public interface IGrid { HexCell GetCellFromWorldPos(Vector3 worldPos); bool IsCellFree(HexCoord coord); void PlaceBuilding(HexCoord coord, BuildingBase building); Vector3 GetWorldPosFromCoord(HexCoord coord); }
 
 [ExecuteInEditMode]
 public class HexGrid : MonoBehaviour, IGrid
 {
-    [SerializeField] private int gridRadius = 5;
-    [SerializeField] private float cellSize = 2f;
-    [SerializeField] private bool drawGizmos = true;
-    [SerializeField] private bool showGridInGame = true;
-    [SerializeField] private Camera playerCamera;
-    [SerializeField] private GameObject previewPrefab; 
+    [SerializeField] private int gridRadius = 5;[SerializeField] private float cellSize = 2f;[SerializeField] private bool drawGizmos = true;[SerializeField] private bool showGridInGame = true;[SerializeField] private Camera playerCamera;
 
     private Dictionary<HexCoord, HexCell> cells = new Dictionary<HexCoord, HexCell>();
     private GameObject linesParent;
-    private GameObject currentPreview;
-    private Material previewMaterial; 
-    private List<GameObject> placedBuildings = new List<GameObject>(); 
+    private List<GameObject> placedBuildings = new List<GameObject>();
+    public float CellSize => cellSize;
 
     [ContextMenu("GenerateHexGrid")]
     public void RegenerateGrid()
@@ -39,33 +27,10 @@ public class HexGrid : MonoBehaviour, IGrid
         {
             RegenerateGrid();
         }
-
-        // Создай preview и копию материала
-        if (previewPrefab != null && currentPreview == null)
-        {
-            currentPreview = Instantiate(previewPrefab, Vector3.zero, Quaternion.identity);
-            currentPreview.SetActive(false); 
-            Renderer renderer = currentPreview.GetComponent<Renderer>();
-            if (renderer != null)
-            {
-                previewMaterial = new Material(renderer.sharedMaterial);
-                renderer.material = previewMaterial;
-                Color color = previewMaterial.color;
-                color.a = 0.5f;
-                previewMaterial.color = color;
-            }
-        }
     }
 
     private void OnDestroy()
     {
-        // Очищаем материал
-        if (previewMaterial != null)
-        {
-            DestroyImmediate(previewMaterial);
-        }
-
-        // Очищаем все здания
         foreach (var building in placedBuildings)
         {
             if (building != null)
@@ -88,7 +53,7 @@ public class HexGrid : MonoBehaviour, IGrid
             {
                 Destroy(transform.GetChild(i).gameObject);
             }
-            Debug.Log($"Cleared {childCount} old child objects in runtime");
+            
         }
         else
         {
@@ -99,7 +64,7 @@ public class HexGrid : MonoBehaviour, IGrid
                 {
                     DestroyImmediate(transform.GetChild(i).gameObject);
                 }
-                Debug.Log($"Cleared {childCount} old child objects in editor");
+             
             }
         }
         linesParent = null;
@@ -108,7 +73,7 @@ public class HexGrid : MonoBehaviour, IGrid
     private void GenerateGrid()
     {
         cells.Clear();
-        Debug.Log($"Generating grid with radius {gridRadius}, cellSize {cellSize}");
+     
         for (int q = -gridRadius; q <= gridRadius; q++)
         {
             int r1 = Mathf.Max(-gridRadius, -q - gridRadius);
@@ -118,10 +83,10 @@ public class HexGrid : MonoBehaviour, IGrid
                 HexCoord coord = new HexCoord(q, r);
                 Vector3 worldPos = CoordToWorldPos(coord);
                 cells.Add(coord, new HexCell(coord, worldPos));
-                Debug.Log($"Cell at q={q}, r={r}, pos={worldPos}");
+                
             }
         }
-        Debug.Log($"Generated {cells.Count} cells");
+     
     }
 
     private Vector3 CoordToWorldPos(HexCoord coord)
@@ -178,6 +143,7 @@ public class HexGrid : MonoBehaviour, IGrid
             {
                 building.transform.position = cell.WorldPosition;
                 building.transform.localScale = Vector3.one * cellSize * 0.8f;
+                building.Initialize(coord);
                 placedBuildings.Add(building.gameObject);
             }
         }
@@ -242,52 +208,4 @@ public class HexGrid : MonoBehaviour, IGrid
         }
     }
 
-    private void Update()
-    {
-        if (playerCamera == null) playerCamera = Camera.main;
-
-       
-        HandlePreview();
-
-       
-        if (Input.GetMouseButtonDown(0) && Application.isPlaying) 
-        {
-            Ray ray = playerCamera.ScreenPointToRay(Input.mousePosition);
-            Plane groundPlane = new Plane(Vector3.up, transform.position.y);
-            if (groundPlane.Raycast(ray, out float distance))
-            {
-                Vector3 hitPoint = ray.GetPoint(distance);
-                HexCell cell = GetCellFromWorldPos(hitPoint);
-                if (cell != null && IsCellFree(cell.Coord))
-                {
-                    GameObject buildingObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    buildingObj.AddComponent<PlaceholderBuilding>();
-                    PlaceBuilding(cell.Coord, buildingObj.GetComponent<BuildingBase>());
-                    if (currentPreview != null) currentPreview.SetActive(false);
-                    Debug.Log($"Placed at Coord: {cell.Coord.q},{cell.Coord.r} | Pos: {cell.WorldPosition}");
-                }
-            }
-        }
-    }
-
-    private void HandlePreview()
-    {
-        if (previewPrefab == null || currentPreview == null) return;
-
-        Ray ray = playerCamera.ScreenPointToRay(Input.mousePosition);
-        Plane groundPlane = new Plane(Vector3.up, transform.position.y);
-        if (groundPlane.Raycast(ray, out float distance))
-        {
-            Vector3 hitPoint = ray.GetPoint(distance);
-            HexCell cell = GetCellFromWorldPos(hitPoint);
-            if (cell != null && IsCellFree(cell.Coord))
-            {
-                currentPreview.transform.position = cell.WorldPosition;
-                currentPreview.transform.localScale = Vector3.one * cellSize * 0.8f;
-                currentPreview.SetActive(true);
-                return;
-            }
-        }
-        currentPreview.SetActive(false);
-    }
 }
