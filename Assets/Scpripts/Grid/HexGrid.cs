@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+
 public interface IGrid
 {
     HexCell GetCellFromWorldPos(Vector3 worldPos);
@@ -8,19 +9,21 @@ public interface IGrid
     Vector3 GetWorldPosFromCoord(HexCoord coord);
 }
 
-
-
-[ExecuteInEditMode] 
+[ExecuteInEditMode]
 public class HexGrid : MonoBehaviour, IGrid
 {
     [SerializeField] private int gridRadius = 5;
-    [SerializeField] private float cellSize = 2f; 
+    [SerializeField] private float cellSize = 2f;
     [SerializeField] private bool drawGizmos = true;
     [SerializeField] private bool showGridInGame = true;
     [SerializeField] private Camera playerCamera;
+    [SerializeField] private GameObject previewPrefab; 
 
     private Dictionary<HexCoord, HexCell> cells = new Dictionary<HexCoord, HexCell>();
     private GameObject linesParent;
+    private GameObject currentPreview;
+    private Material previewMaterial; 
+    private List<GameObject> placedBuildings = new List<GameObject>(); 
 
     [ContextMenu("GenerateHexGrid")]
     public void RegenerateGrid()
@@ -30,11 +33,56 @@ public class HexGrid : MonoBehaviour, IGrid
         SetupLineRenderers();
     }
 
+    private void Start()
+    {
+        if (cells.Count == 0)
+        {
+            RegenerateGrid();
+        }
+
+        // Создай preview и копию материала
+        if (previewPrefab != null && currentPreview == null)
+        {
+            currentPreview = Instantiate(previewPrefab, Vector3.zero, Quaternion.identity);
+            currentPreview.SetActive(false); 
+            Renderer renderer = currentPreview.GetComponent<Renderer>();
+            if (renderer != null)
+            {
+                previewMaterial = new Material(renderer.sharedMaterial);
+                renderer.material = previewMaterial;
+                Color color = previewMaterial.color;
+                color.a = 0.5f;
+                previewMaterial.color = color;
+            }
+        }
+    }
+
+    private void OnDestroy()
+    {
+        // Очищаем материал
+        if (previewMaterial != null)
+        {
+            DestroyImmediate(previewMaterial);
+        }
+
+        // Очищаем все здания
+        foreach (var building in placedBuildings)
+        {
+            if (building != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(building);
+                else
+                    DestroyImmediate(building);
+            }
+        }
+        placedBuildings.Clear();
+    }
+
     private void ClearOldLines()
     {
         if (Application.isPlaying)
         {
-            
             int childCount = transform.childCount;
             for (int i = childCount - 1; i >= 0; i--)
             {
@@ -44,7 +92,6 @@ public class HexGrid : MonoBehaviour, IGrid
         }
         else
         {
-           
             int childCount = transform.childCount;
             if (childCount > 0)
             {
@@ -55,7 +102,7 @@ public class HexGrid : MonoBehaviour, IGrid
                 Debug.Log($"Cleared {childCount} old child objects in editor");
             }
         }
-        linesParent = null; 
+        linesParent = null;
     }
 
     private void GenerateGrid()
@@ -131,6 +178,7 @@ public class HexGrid : MonoBehaviour, IGrid
             {
                 building.transform.position = cell.WorldPosition;
                 building.transform.localScale = Vector3.one * cellSize * 0.8f;
+                placedBuildings.Add(building.gameObject);
             }
         }
     }
@@ -198,19 +246,48 @@ public class HexGrid : MonoBehaviour, IGrid
     {
         if (playerCamera == null) playerCamera = Camera.main;
 
-        if (Input.GetMouseButtonDown(0))
+       
+        HandlePreview();
+
+       
+        if (Input.GetMouseButtonDown(0) && Application.isPlaying) 
         {
             Ray ray = playerCamera.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit))
+            Plane groundPlane = new Plane(Vector3.up, transform.position.y);
+            if (groundPlane.Raycast(ray, out float distance))
             {
-                HexCell cell = GetCellFromWorldPos(hit.point);
+                Vector3 hitPoint = ray.GetPoint(distance);
+                HexCell cell = GetCellFromWorldPos(hitPoint);
                 if (cell != null && IsCellFree(cell.Coord))
                 {
-                    GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    cube.AddComponent<PlaceholderBuilding>();
-                    PlaceBuilding(cell.Coord, cube.GetComponent<BuildingBase>());
+                    GameObject buildingObj = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    buildingObj.AddComponent<PlaceholderBuilding>();
+                    PlaceBuilding(cell.Coord, buildingObj.GetComponent<BuildingBase>());
+                    if (currentPreview != null) currentPreview.SetActive(false);
+                    Debug.Log($"Placed at Coord: {cell.Coord.q},{cell.Coord.r} | Pos: {cell.WorldPosition}");
                 }
             }
         }
+    }
+
+    private void HandlePreview()
+    {
+        if (previewPrefab == null || currentPreview == null) return;
+
+        Ray ray = playerCamera.ScreenPointToRay(Input.mousePosition);
+        Plane groundPlane = new Plane(Vector3.up, transform.position.y);
+        if (groundPlane.Raycast(ray, out float distance))
+        {
+            Vector3 hitPoint = ray.GetPoint(distance);
+            HexCell cell = GetCellFromWorldPos(hitPoint);
+            if (cell != null && IsCellFree(cell.Coord))
+            {
+                currentPreview.transform.position = cell.WorldPosition;
+                currentPreview.transform.localScale = Vector3.one * cellSize * 0.8f;
+                currentPreview.SetActive(true);
+                return;
+            }
+        }
+        currentPreview.SetActive(false);
     }
 }
