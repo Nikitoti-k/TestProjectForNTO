@@ -12,8 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a93bec7e80f222947ad35b76d0c9bf23, type: 3}
   m_Name: First_EnemyData
   m_EditorClassIdentifier: 
-  MaxHealth: 50
-  Speed: 3
+  MaxHealth: 500
+  Speed: 1
   Damage: 10
   AttackRate: 1
-  AttackRange: 1
+  AttackRange: 0.55
+  DetectionRange: 1000

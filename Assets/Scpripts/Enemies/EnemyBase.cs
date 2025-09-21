@@ -47,7 +47,12 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected float GetAttackRange()
     {
-        return data != null ? data.AttackRange : 1f; // Fallback, если data не назначен
+        return data != null ? data.AttackRange : 1f;
+    }
+
+    protected float GetDetectionRange()
+    {
+        return data != null ? data.DetectionRange : 5f;
     }
 
     protected abstract void Move();

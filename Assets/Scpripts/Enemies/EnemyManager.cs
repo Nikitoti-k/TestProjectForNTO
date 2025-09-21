@@ -26,7 +26,11 @@ public class EnemyManager : MonoBehaviour
     private void Start()
     {
         InitializePool();
-        InvokeRepeating(nameof(SpawnEnemy), 5f, 5f);
+        InvokeRepeating(nameof(SpawnEnemy), 2f, 2f);
+        InvokeRepeating(nameof(SpawnEnemy), 2f, 2f);
+        InvokeRepeating(nameof(SpawnEnemy), 2f, 2f);
+        InvokeRepeating(nameof(SpawnEnemy), 2f, 2f);
+        InvokeRepeating(nameof(SpawnEnemy), 2f, 2f);
     }
 
     private void InitializePool()

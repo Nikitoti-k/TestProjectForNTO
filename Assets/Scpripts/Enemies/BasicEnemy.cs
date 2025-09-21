@@ -1,14 +1,26 @@
-using UnityEngine;
+п»їusing UnityEngine;
+using UnityEngine.AI;
 
+[RequireComponent(typeof(NavMeshAgent))]
 public class BasicEnemy : EnemyBase
 {
-    private Vector3 targetPosition; // Позиция штаба
-    private BuildingBase currentTarget; // Текущая цель атаки
-    [SerializeField] private LayerMask buildingLayer; // Layer для зданий
+    private NavMeshAgent agent;
+    private Vector3 targetPosition; // РџРѕР·РёС†РёСЏ С€С‚Р°Р±Р°
+    private BuildingBase currentTarget; // РўРµРєСѓС‰Р°СЏ С†РµР»СЊ 
+    [SerializeField] private LayerMask buildingLayer;
 
     public override void Initialize()
     {
         base.Initialize();
+        agent = GetComponent<NavMeshAgent>();
+        if (agent == null)
+        {
+            Debug.LogWarning($"{name}: NavMeshAgent is missing!");
+            return;
+        }
+        agent.speed = data.Speed;
+        agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+
         var hexGrid = FindObjectOfType<HexGrid>();
         if (hexGrid != null)
         {
@@ -22,13 +34,21 @@ public class BasicEnemy : EnemyBase
 
     private void Update()
     {
-        if (data == null) return;
+        if (data == null || agent == null) return;
 
         if (currentTarget != null)
         {
-            // Атакуем, если в радиусе
-            if (Vector3.Distance(transform.position, currentTarget.Position) <= GetAttackRange())
+            // РџСЂРѕРІРµСЂСЏРµРј, Р¶РёРІР° Р»Рё С†РµР»СЊ
+            if (!currentTarget.gameObject.activeInHierarchy)
             {
+                currentTarget = null;
+                agent.isStopped = false;
+                CheckForBuildings();
+                Move();
+            }
+            else if (Vector3.Distance(transform.position, currentTarget.Position) <= GetAttackRange())
+            {
+                agent.isStopped = true; 
                 if (CanAttack())
                 {
                     AttackTarget(currentTarget);
@@ -37,7 +57,7 @@ public class BasicEnemy : EnemyBase
             }
             else
             {
-                currentTarget = null;
+                agent.isStopped = false;
                 Move();
             }
         }
@@ -50,9 +70,14 @@ public class BasicEnemy : EnemyBase
 
     protected override void Move()
     {
-        if (data == null) return;
-        transform.position = Vector3.MoveTowards(transform.position, targetPosition, data.Speed * Time.deltaTime);
-        transform.LookAt(targetPosition);
+        if (data == null || agent == null) return;
+
+        Vector3 destination = currentTarget != null ? currentTarget.Position : targetPosition;
+        if (agent.destination != destination)
+        {
+            Vector3 offset = Random.insideUnitCircle * GetAttackRange(); 
+            agent.SetDestination(destination + new Vector3(offset.x, 0f, offset.y));
+        }
     }
 
     protected override void AttackTarget(BuildingBase target)
@@ -65,15 +90,24 @@ public class BasicEnemy : EnemyBase
     private void CheckForBuildings()
     {
         if (data == null) return;
-        Collider[] hits = Physics.OverlapSphere(transform.position, GetAttackRange(), buildingLayer);
+        Collider[] hits = Physics.OverlapSphere(transform.position, GetDetectionRange(), buildingLayer);
+        BuildingBase closestBuilding = null;
+        float minDistance = float.MaxValue;
+
         foreach (var hit in hits)
         {
             BuildingBase building = hit.GetComponent<BuildingBase>();
-            if (building != null)
+            if (building != null && building.gameObject.activeInHierarchy)
             {
-                currentTarget = building;
-                return;
+                float distance = Vector3.Distance(transform.position, building.Position);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    closestBuilding = building;
+                }
             }
         }
+
+        currentTarget = closestBuilding;
     }
 }
