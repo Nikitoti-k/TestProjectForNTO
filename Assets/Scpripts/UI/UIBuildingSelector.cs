@@ -15,7 +15,7 @@ public class UIBuildingSelector : MonoBehaviour
     {
         if (accessibleBuildings == null || buttonPrefab == null || buttonParent == null)
         {
-            Debug.LogWarning("UIBuildingSelector: Missing references");
+            Debug.LogWarning("Не заданы классы!");
             return;
         }
 
@@ -44,7 +44,7 @@ public class UIBuildingSelector : MonoBehaviour
 
             if (button == null || text == null)
             {
-                Debug.LogWarning("UIBuildingSelector: Button prefab missing components!!!");
+                Debug.LogWarning("Нет компонентов!");
                 continue;
             }
 
@@ -56,7 +56,7 @@ public class UIBuildingSelector : MonoBehaviour
                 cost = turretData.Levels[0].Cost;
             }
             
-            text.text = $"{displayName}\nCost: {cost}";
+            text.text = $"{displayName}\nСтоимость: {cost}";
 
             
             int buildingCost = cost;
@@ -71,7 +71,7 @@ public class UIBuildingSelector : MonoBehaviour
                 }
                 else
                 {
-                    ShowError("Not enough money!");
+                    ShowError("Недостаточно валюты");
                 }
             });
         }
@@ -81,7 +81,7 @@ public class UIBuildingSelector : MonoBehaviour
     {
         if (currencyText != null)
         {
-            currencyText.text = $"Gold: {amount}";
+            currencyText.text = $"Деньги: {amount}";
         }
     }
 

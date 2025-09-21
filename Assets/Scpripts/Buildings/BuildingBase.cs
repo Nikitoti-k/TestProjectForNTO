@@ -1,9 +1,9 @@
 using UnityEngine;
-// Родитель для будущих классов зданий, задал общую функциональность
+
 public abstract class BuildingBase : MonoBehaviour
 {
     public Vector3 Position => transform.position;
-    public HexCoord GridPosition { get; private set; }
+    public HexCoord GridPosition { get; protected set; }
     public int CurrentHealth { get; protected set; }
 
     [SerializeField] protected int maxHealth = 100;
