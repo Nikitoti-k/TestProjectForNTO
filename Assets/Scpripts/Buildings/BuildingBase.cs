@@ -4,7 +4,7 @@ public abstract class BuildingBase : MonoBehaviour
 {
     public Vector3 Position => transform.position;
     public HexCoord GridPosition { get; protected set; }
-    public int CurrentHealth { get; protected set; }
+     public int CurrentHealth { get; protected set; }
 
     [SerializeField] protected int maxHealth = 100;
 
@@ -17,6 +17,7 @@ public abstract class BuildingBase : MonoBehaviour
     public virtual void TakeDamage(int damage)
     {
         CurrentHealth -= damage;
+        Debug.Log("Çהמנמגüטצו:" + CurrentHealth);
         if (CurrentHealth <= 0)
         {
             DestroyBuilding();
