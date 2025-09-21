@@ -1,18 +1,17 @@
 using UnityEngine;
 using UnityEngine.UI;
-
+// Синглтон для фаз строительства, размещает здания в клетках
 public class BuildingManager : MonoBehaviour
 {
     public static BuildingManager Instance { get; private set; }
 
     [SerializeField] private HexGrid hexGrid;
-    [SerializeField] private GameObject turretPrefab;
-    [SerializeField] private Button buildTurretButton;
 
     private GameObject currentPreview;
     private bool isBuildingMode = false;
     private GameObject buildingPrefab;
     private Material previewMaterial;
+    private int currentBuildingCost; 
 
     private void Awake()
     {
@@ -26,19 +25,12 @@ public class BuildingManager : MonoBehaviour
         }
     }
 
-    private void Start()
+    public void StartBuilding(GameObject prefab, int cost)
     {
-        if (buildTurretButton != null)
-        {
-            buildTurretButton.onClick.AddListener(StartBuildingTurret);
-        }
-    }
+        if (prefab == null) return;
 
-    public void StartBuildingTurret()
-    {
-        if (turretPrefab == null) return;
-
-        buildingPrefab = turretPrefab;
+        buildingPrefab = prefab;
+        currentBuildingCost = cost;
         isBuildingMode = true;
 
         currentPreview = Instantiate(buildingPrefab, Vector3.zero, Quaternion.identity);
@@ -75,6 +67,7 @@ public class BuildingManager : MonoBehaviour
                     if (building != null)
                     {
                         hexGrid.PlaceBuilding(cell.Coord, building);
+                        CurrencyManager.Instance.SpendCurrency(currentBuildingCost); 
                     }
                     EndBuildingMode();
                 }
@@ -114,6 +107,8 @@ public class BuildingManager : MonoBehaviour
         if (previewMaterial != null)
         {
             Destroy(previewMaterial);
+            previewMaterial = null;
         }
+        currentBuildingCost = 0;
     }
 }

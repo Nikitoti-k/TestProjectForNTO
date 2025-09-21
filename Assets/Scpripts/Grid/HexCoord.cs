@@ -1,5 +1,5 @@
 using UnityEngine;
-
+// Структурка для работы с координатами в гексагональной сетке
 [System.Serializable]
 public struct HexCoord
 {

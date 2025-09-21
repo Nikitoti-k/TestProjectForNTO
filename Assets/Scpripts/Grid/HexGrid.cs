@@ -1,8 +1,12 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public interface IGrid { HexCell GetCellFromWorldPos(Vector3 worldPos); bool IsCellFree(HexCoord coord); void PlaceBuilding(HexCoord coord, BuildingBase building); Vector3 GetWorldPosFromCoord(HexCoord coord); }
-
+public interface IGrid { 
+    HexCell GetCellFromWorldPos(Vector3 worldPos); 
+    bool IsCellFree(HexCoord coord); 
+    void PlaceBuilding(HexCoord coord, BuildingBase building); 
+    Vector3 GetWorldPosFromCoord(HexCoord coord); }
+// Генерируем сетку + отображаем. Также добавил отображение и генерацию клеток на сцене для удобства отладки
 [ExecuteInEditMode]
 public class HexGrid : MonoBehaviour, IGrid
 {

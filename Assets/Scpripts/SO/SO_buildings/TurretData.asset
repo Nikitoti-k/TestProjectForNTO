@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: TurretData
   m_EditorClassIdentifier: 
   Levels:
-  - Cost: 0
+  - Cost: 100
     Damage: 0
     FireRate: 0
     Range: 0
-  - Cost: 0
+  - Cost: 200
     Damage: 0
     FireRate: 0
     Range: 0
-  - Cost: 0
+  - Cost: 400
     Damage: 0
     FireRate: 0
     Range: 0

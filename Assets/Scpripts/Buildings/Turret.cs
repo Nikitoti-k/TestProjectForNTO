@@ -1,5 +1,5 @@
 using UnityEngine;
-
+// Первое здание - турель, соотвесвенно добавил ей всё что присуще зданию турели: урон, скорострельность, дальность. Цифры берём из базы данных (TurretData)
 public class Turret : BuildingBase
 {
     [SerializeField] private TurretData data;
@@ -32,10 +32,7 @@ public class Turret : BuildingBase
 
     private void Attack()
     {
-        if (target != null)
-        {
-            Debug.Log($"Turret attacks for {currentDamage} damage");
-        }
+        
     }
 
     public void Upgrade()

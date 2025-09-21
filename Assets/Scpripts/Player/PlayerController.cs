@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-
+// Движение игрока - пока топорненко, как реализую всю основу - допилю
 public class PlayerController : MonoBehaviour
 {
     private Controls inputActions;

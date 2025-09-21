@@ -1,5 +1,5 @@
 using UnityEngine;
-
+// Родитель для будущих классов зданий, задал общую функциональность
 public abstract class BuildingBase : MonoBehaviour
 {
     public Vector3 Position => transform.position;

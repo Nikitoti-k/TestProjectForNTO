@@ -1,5 +1,5 @@
 using UnityEngine;
-
+// Одна клетка в нашей сетке, храним координаты (гексагональные и мировые), ссылаемся на здание которое стоит на этой клетке
 public class HexCell
 {
     public HexCoord Coord { get; private set; }
