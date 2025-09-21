@@ -1,26 +1,30 @@
 using System.Collections.Generic;
 using UnityEngine;
+
 public interface IGrid
 {
     HexCell GetCellFromWorldPos(Vector3 worldPos);
     bool IsCellFree(HexCoord coord);
     void PlaceBuilding(HexCoord coord, BuildingBase building);
     Vector3 GetWorldPosFromCoord(HexCoord coord);
+    Headquarters GetHeadquarters(); 
 }
-
-
-
-[ExecuteInEditMode] 
+// Генерируем сетку + отображаем. Также добавил отображение и генерацию клеток на сцене для удобства отладки
+[ExecuteInEditMode]
 public class HexGrid : MonoBehaviour, IGrid
 {
     [SerializeField] private int gridRadius = 5;
-    [SerializeField] private float cellSize = 2f; 
+    [SerializeField] private float cellSize = 2f;
     [SerializeField] private bool drawGizmos = true;
     [SerializeField] private bool showGridInGame = true;
     [SerializeField] private Camera playerCamera;
+    [SerializeField] private GameObject headquartersPrefab; 
 
     private Dictionary<HexCoord, HexCell> cells = new Dictionary<HexCoord, HexCell>();
     private GameObject linesParent;
+    private List<GameObject> placedBuildings = new List<GameObject>();
+    private Headquarters headquarters;
+    public float CellSize => cellSize;
 
     [ContextMenu("GenerateHexGrid")]
     public void RegenerateGrid()
@@ -30,11 +34,40 @@ public class HexGrid : MonoBehaviour, IGrid
         SetupLineRenderers();
     }
 
+    private void Start()
+    {
+        if (cells.Count == 0)
+        {
+            RegenerateGrid();
+        }
+
+        // Размещаем штаб, если его нет
+        if (headquarters == null && headquartersPrefab != null && Application.isPlaying)
+        {
+            PlaceHeadquarters();
+        }
+    }
+
+    private void OnDestroy()
+    {
+        foreach (var building in placedBuildings)
+        {
+            if (building != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(building);
+                else
+                    DestroyImmediate(building);
+            }
+        }
+        placedBuildings.Clear();
+        headquarters = null;
+    }
+
     private void ClearOldLines()
     {
         if (Application.isPlaying)
         {
-            
             int childCount = transform.childCount;
             for (int i = childCount - 1; i >= 0; i--)
             {
@@ -44,7 +77,6 @@ public class HexGrid : MonoBehaviour, IGrid
         }
         else
         {
-           
             int childCount = transform.childCount;
             if (childCount > 0)
             {
@@ -52,16 +84,16 @@ public class HexGrid : MonoBehaviour, IGrid
                 {
                     DestroyImmediate(transform.GetChild(i).gameObject);
                 }
-                Debug.Log($"Cleared {childCount} old child objects in editor");
+               
             }
         }
-        linesParent = null; 
+        linesParent = null;
     }
 
     private void GenerateGrid()
     {
         cells.Clear();
-        Debug.Log($"Generating grid with radius {gridRadius}, cellSize {cellSize}");
+       
         for (int q = -gridRadius; q <= gridRadius; q++)
         {
             int r1 = Mathf.Max(-gridRadius, -q - gridRadius);
@@ -71,10 +103,10 @@ public class HexGrid : MonoBehaviour, IGrid
                 HexCoord coord = new HexCoord(q, r);
                 Vector3 worldPos = CoordToWorldPos(coord);
                 cells.Add(coord, new HexCell(coord, worldPos));
-                Debug.Log($"Cell at q={q}, r={r}, pos={worldPos}");
+                Debug.Log($"Клетка: q={q}, r={r}, pos={worldPos}");
             }
         }
-        Debug.Log($"Generated {cells.Count} cells");
+       
     }
 
     private Vector3 CoordToWorldPos(HexCoord coord)
@@ -131,8 +163,66 @@ public class HexGrid : MonoBehaviour, IGrid
             {
                 building.transform.position = cell.WorldPosition;
                 building.transform.localScale = Vector3.one * cellSize * 0.8f;
+                building.Initialize(coord);
+                placedBuildings.Add(building.gameObject);
             }
         }
+    }
+
+    private void PlaceHeadquarters()
+    {
+        if (headquarters != null || headquartersPrefab == null) return;
+
+        HexCoord centerCoord = new HexCoord(0, 0);
+        if (!cells.ContainsKey(centerCoord)) return;
+
+      
+        var neighborCoords = GetNeighborCoords(centerCoord);
+        foreach (var coord in neighborCoords)
+        {
+            if (!cells.ContainsKey(coord) || !IsCellFree(coord))
+            {
+                Debug.LogWarning("Cannot place Headquarters: Neighbor cells are occupied or out of grid");
+                return;
+            }
+        }
+
+       // под штаб
+        GameObject hqObj = Instantiate(headquartersPrefab, CoordToWorldPos(centerCoord), Quaternion.identity);
+        headquarters = hqObj.GetComponent<Headquarters>();
+        if (headquarters != null)
+        {
+            headquarters.Initialize(centerCoord);
+            foreach (var coord in headquarters.OccupiedCoords)
+            {
+                if (cells.TryGetValue(coord, out HexCell cell))
+                {
+                    cell.Occupy(headquarters);
+                }
+            }
+            placedBuildings.Add(hqObj);
+            Debug.Log("Headquarters placed at (0,0)");
+        }
+    }
+
+    public Headquarters GetHeadquarters()
+    {
+        return headquarters;
+    }
+
+    private List<HexCoord> GetNeighborCoords(HexCoord center)
+    {
+        var directions = new HexCoord[]
+        {
+            new HexCoord(1, 0), new HexCoord(1, -1), new HexCoord(0, -1),
+            new HexCoord(-1, 0), new HexCoord(-1, 1), new HexCoord(0, 1)
+        };
+        var neighbors = new List<HexCoord>();
+        foreach (var dir in directions)
+        {
+            neighbors.Add(new HexCoord(center.q + dir.q, center.r + dir.r));
+        }
+        return neighbors;
     }
 
     public Vector3 GetWorldPosFromCoord(HexCoord coord)
@@ -190,26 +280,6 @@ public class HexGrid : MonoBehaviour, IGrid
             for (int i = 0; i < 6; i++)
             {
                 Gizmos.DrawLine(corners[i], corners[(i + 1) % 6]);
-            }
-        }
-    }
-
-    private void Update()
-    {
-        if (playerCamera == null) playerCamera = Camera.main;
-
-        if (Input.GetMouseButtonDown(0))
-        {
-            Ray ray = playerCamera.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit))
-            {
-                HexCell cell = GetCellFromWorldPos(hit.point);
-                if (cell != null && IsCellFree(cell.Coord))
-                {
-                    GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    cube.AddComponent<PlaceholderBuilding>();
-                    PlaceBuilding(cell.Coord, cube.GetComponent<BuildingBase>());
-                }
             }
         }
     }

@@ -1,5 +1,5 @@
 using UnityEngine;
-
+// Клетка на сетке
 public class HexCell
 {
     public HexCoord Coord { get; private set; }
