@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 
 public abstract class EnemyBase : MonoBehaviour
 {
@@ -6,6 +7,7 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected int currentHealth;
     protected float nextAttackTime = 0f;
+    public UnityEvent<EnemyBase> OnDeactivated = new UnityEvent<EnemyBase>(); // Новое событие
 
     public virtual void Initialize()
     {
@@ -29,7 +31,7 @@ public abstract class EnemyBase : MonoBehaviour
     protected virtual void Deactivate()
     {
         gameObject.SetActive(false);
-        // Здесь можно добавить эффекты смерти
+        OnDeactivated.Invoke(this);
     }
 
     protected bool CanAttack()

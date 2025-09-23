@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-// Синглтон для фаз строительства, размещает здания в клетках
+
 public class BuildingManager : MonoBehaviour
 {
     public static BuildingManager Instance { get; private set; }
@@ -11,7 +11,7 @@ public class BuildingManager : MonoBehaviour
     private bool isBuildingMode = false;
     private GameObject buildingPrefab;
     private Material previewMaterial;
-    private int currentBuildingCost; 
+    private int currentBuildingCost;
 
     private void Awake()
     {
@@ -35,6 +35,12 @@ public class BuildingManager : MonoBehaviour
 
         currentPreview = Instantiate(buildingPrefab, Vector3.zero, Quaternion.identity);
         currentPreview.SetActive(false);
+        // Отключаем BuildingBase (или его наследника, например, Turret)
+        BuildingBase buildingBase = currentPreview.GetComponent<BuildingBase>();
+        if (buildingBase != null)
+        {
+            buildingBase.enabled = false;
+        }
         Renderer renderer = currentPreview.GetComponent<Renderer>();
         if (renderer != null)
         {
@@ -67,7 +73,7 @@ public class BuildingManager : MonoBehaviour
                     if (building != null)
                     {
                         hexGrid.PlaceBuilding(cell.Coord, building);
-                        CurrencyManager.Instance.SpendCurrency(currentBuildingCost); 
+                        CurrencyManager.Instance.SpendCurrency(currentBuildingCost);
                     }
                     EndBuildingMode();
                 }

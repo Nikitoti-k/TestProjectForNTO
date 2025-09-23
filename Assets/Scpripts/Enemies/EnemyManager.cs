@@ -5,11 +5,12 @@ public class EnemyManager : MonoBehaviour
 {
     public static EnemyManager Instance { get; private set; }
 
-    [SerializeField] private BasicEnemy enemyPrefab;
+    [SerializeField] private BasicEnemy enemyPrefab; // Базовый для пула
     [SerializeField] private int poolSize = 20;
-    [SerializeField] private Transform[] spawnPoints;
+    [SerializeField] private Transform[] spawnPoints; // Глобальные точки
+    public Transform[] SpawnPoints => spawnPoints; // Публичный геттер
 
-    private List<BasicEnemy> enemyPool = new List<BasicEnemy>();
+    private List<EnemyBase> enemyPool = new List<EnemyBase>();
 
     private void Awake()
     {
@@ -26,11 +27,6 @@ public class EnemyManager : MonoBehaviour
     private void Start()
     {
         InitializePool();
-        InvokeRepeating(nameof(SpawnEnemy), 2f, 2f);
-        InvokeRepeating(nameof(SpawnEnemy), 2f, 2f);
-        InvokeRepeating(nameof(SpawnEnemy), 2f, 2f);
-        InvokeRepeating(nameof(SpawnEnemy), 2f, 2f);
-        InvokeRepeating(nameof(SpawnEnemy), 2f, 2f);
     }
 
     private void InitializePool()
@@ -43,28 +39,52 @@ public class EnemyManager : MonoBehaviour
         }
     }
 
-    private BasicEnemy GetFromPool()
+    public EnemyBase SpawnEnemy(GameObject enemyPrefab, Vector3 spawnPosition)
     {
+        EnemyBase enemy = GetFromPool(enemyPrefab);
+        if (enemy != null)
+        {
+            enemy.transform.position = spawnPosition;
+            enemy.Initialize();
+            enemy.gameObject.SetActive(true);
+        }
+        return enemy;
+    }
+
+    public EnemyBase SpawnEnemy(GameObject enemyPrefab, Transform spawnPoint)
+    {
+        return SpawnEnemy(enemyPrefab, spawnPoint != null ? spawnPoint.position : GetRandomSpawnPoint().position);
+    }
+
+    private EnemyBase GetFromPool(GameObject enemyPrefab)
+    {
+        EnemyBase prefabEnemy = enemyPrefab.GetComponent<EnemyBase>();
+        if (prefabEnemy == null)
+        {
+            Debug.LogWarning($"Enemy prefab {enemyPrefab.name} has no EnemyBase component!");
+            return null;
+        }
+
         foreach (var enemy in enemyPool)
         {
-            if (!enemy.gameObject.activeInHierarchy)
+            if (!enemy.gameObject.activeInHierarchy && enemy.GetType() == prefabEnemy.GetType())
             {
                 return enemy;
             }
         }
-        BasicEnemy newEnemy = Instantiate(enemyPrefab, Vector3.zero, Quaternion.identity);
+        EnemyBase newEnemy = Instantiate(enemyPrefab, Vector3.zero, Quaternion.identity).GetComponent<EnemyBase>();
         newEnemy.gameObject.SetActive(false);
         enemyPool.Add(newEnemy);
         return newEnemy;
     }
 
-    public void SpawnEnemy()
+    public Transform GetRandomSpawnPoint()
     {
-        if (spawnPoints.Length == 0) return;
-        Transform spawnPoint = spawnPoints[Random.Range(0, spawnPoints.Length)];
-        BasicEnemy enemy = GetFromPool();
-        enemy.transform.position = spawnPoint.position;
-        enemy.Initialize();
-        enemy.gameObject.SetActive(true);
+        if (spawnPoints == null || spawnPoints.Length == 0)
+        {
+            Debug.LogWarning("No spawn points defined in EnemyManager!");
+            return transform;
+        }
+        return spawnPoints[Random.Range(0, spawnPoints.Length)];
     }
 }

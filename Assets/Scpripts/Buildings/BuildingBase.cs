@@ -4,20 +4,18 @@ public abstract class BuildingBase : MonoBehaviour
 {
     public Vector3 Position => transform.position;
     public HexCoord GridPosition { get; protected set; }
-     public int CurrentHealth { get; protected set; }
-
-    [SerializeField] protected int maxHealth = 100;
+    public virtual int CurrentHealth { get; protected set; } // Виртуальное свойство
+    public bool IsPlaced { get; protected set; }
 
     public virtual void Initialize(HexCoord coord)
     {
         GridPosition = coord;
-        CurrentHealth = maxHealth;
+        IsPlaced = true;
     }
 
-    public virtual void TakeDamage(int damage)
+    public virtual void TakeDamage(int amount)
     {
-        CurrentHealth -= damage;
-        Debug.Log("Здоровьице:" + CurrentHealth);
+        CurrentHealth -= amount;
         if (CurrentHealth <= 0)
         {
             DestroyBuilding();
