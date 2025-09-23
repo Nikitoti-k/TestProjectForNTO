@@ -14,14 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Levels:
   - Cost: 100
-    Damage: 10
-    FireRate: 2
-    Range: 5
+    MaxHealth: 100
   - Cost: 200
-    Damage: 0
-    FireRate: 0
-    Range: 0
+    MaxHealth: 200
   - Cost: 400
-    Damage: 0
-    FireRate: 0
-    Range: 0
+    MaxHealth: 400
+  Modules:
+  - {fileID: 11400000, guid: 47626710649338840b07906c4c236e43, type: 2}

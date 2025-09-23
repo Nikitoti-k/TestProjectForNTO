@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0943add750c1c14bbd72c94aa32399b, type: 3}
+  m_Name: TurretModule
+  m_EditorClassIdentifier: 
+  LevelData:
+  - Damage: 10
+    FireRate: 1
+    Range: 5
+    ProjectilePrefab: {fileID: 7520475760011816767, guid: 31954620633976f478ba75d06f513a16, type: 3}
+    ModelPrefab: {fileID: 296473714273952512, guid: 092446e09160b3e43ae1fc477ab01bf7, type: 3}
+  - Damage: 20
+    FireRate: 2
+    Range: 7
+    ProjectilePrefab: {fileID: 7520475760011816767, guid: 31954620633976f478ba75d06f513a16, type: 3}
+    ModelPrefab: {fileID: 296473714273952512, guid: 092446e09160b3e43ae1fc477ab01bf7, type: 3}
+  - Damage: 30
+    FireRate: 3
+    Range: 9
+    ProjectilePrefab: {fileID: 7520475760011816767, guid: 31954620633976f478ba75d06f513a16, type: 3}
+    ModelPrefab: {fileID: 296473714273952512, guid: 092446e09160b3e43ae1fc477ab01bf7, type: 3}

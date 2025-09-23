@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class Headquarters : BuildingBase
 {
-    [SerializeField] private int maxHealth = 1000; // Локальное здоровье для штаба
+    [SerializeField] private int maxHealth = 1000; // Здоровье в инспекторе
     private List<HexCoord> occupiedCoords = new List<HexCoord>();
 
     public override int CurrentHealth { get; protected set; }
@@ -14,8 +14,7 @@ public class Headquarters : BuildingBase
         base.Initialize(centerCoord);
         CurrentHealth = maxHealth;
         occupiedCoords.Add(centerCoord);
-        var neighbors = GetNeighborCoords(centerCoord);
-        occupiedCoords.AddRange(neighbors);
+        occupiedCoords.AddRange(GetNeighborCoords(centerCoord));
     }
 
     public override void TakeDamage(int amount)
@@ -48,5 +47,18 @@ public class Headquarters : BuildingBase
             neighbors.Add(neighbor);
         }
         return neighbors;
+    }
+
+    // Переопределяем Upgrade, так как Headquarters не использует BuildingData
+    public override void Upgrade()
+    {
+        // Можно оставить пустым или добавить логику, если апгрейды нужны
+        Debug.Log("Headquarters upgrade not implemented.");
+    }
+
+    protected override void UpgradeToLevel(int level)
+    {
+        currentLevel = level;
+        CurrentHealth = maxHealth; // Здоровье не меняется, или можно добавить логику
     }
 }

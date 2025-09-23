@@ -64,7 +64,7 @@ public class UIManager : MonoBehaviour
 
             string displayName = building.DisplayName;
             int cost = 0;
-            if (building.BuildingData is TurretData turretData && turretData.Levels.Count > 0)
+            if (building.BuildingData is BuildingData turretData && turretData.Levels.Count > 0)
             {
                 cost = turretData.Levels[0].Cost;
             }

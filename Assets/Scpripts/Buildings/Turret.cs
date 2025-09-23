@@ -1,30 +1,33 @@
 using UnityEngine;
-// первая башня - турель
+
 public class Turret : BuildingBase
 {
-    [SerializeField] private TurretData data;
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private Transform projectileSpawnPoint;
 
-    private int currentLevel = 0;
+    // Новое: Трансформ, куда ставить модель (например, child "ModelSlot" в префабе турели)
+    [SerializeField] private Transform modelSlot; // Assign в инспекторе (если null, используй transform)
+
     private float nextFireTime = 0f;
     private EnemyBase currentTarget;
     private float currentDamage;
     private float currentFireRate;
     private float currentRange;
+    private GameObject currentModel; // Текущая модель для удаления при апгрейде
 
     public override void Initialize(HexCoord coord)
     {
         base.Initialize(coord);
-        if (data != null && data.Levels.Count > 0)
-        {
-            UpgradeToLevel(0);
-        }
+        // Инициализируем модель для уровня 0
+        UpgradeToLevel(0);
     }
 
     private void Update()
     {
         if (data == null) return;
+
+        var turretModule = GetModule<TurretModule>();
+        if (turretModule == null) return;
 
         if (currentTarget != null)
         {
@@ -32,7 +35,7 @@ public class Turret : BuildingBase
             {
                 if (Time.time >= nextFireTime)
                 {
-                    Attack();
+                    Attack(turretModule);
                     nextFireTime = Time.time + (1f / currentFireRate);
                 }
             }
@@ -47,11 +50,11 @@ public class Turret : BuildingBase
         }
     }
 
-    private void Attack()
+    private void Attack(TurretModule module)
     {
         if (currentTarget == null || !currentTarget.gameObject.activeInHierarchy || ProjectilePool.Instance == null)
         {
-            return; 
+            return;
         }
 
         TurretProjectile projectile = ProjectilePool.Instance.GetProjectile();
@@ -60,21 +63,45 @@ public class Turret : BuildingBase
         Debug.Log($"Turret fires at {currentTarget.name} for {currentDamage} damage");
     }
 
-    public void Upgrade()
+    public override void Upgrade()
     {
-        if (currentLevel < data.Levels.Count - 1)
+        base.Upgrade();
+    }
+
+    protected override void UpgradeToLevel(int level)
+    {
+        base.UpgradeToLevel(level);
+        var turretModule = GetModule<TurretModule>();
+        if (turretModule != null && turretModule.LevelData.Count > level)
         {
-            UpgradeToLevel(currentLevel + 1);
+            var levelData = turretModule.LevelData[level];
+            currentDamage = levelData.Damage;
+            currentFireRate = levelData.FireRate;
+            currentRange = levelData.Range;
+
+            // Новое: Смена модели
+            UpdateVisual(levelData);
         }
     }
 
-    private void UpgradeToLevel(int level)
+    private void UpdateVisual(TurretLevelData levelData)
     {
-        currentLevel = level;
-        var levelData = data.Levels[level];
-        currentDamage = levelData.Damage;
-        currentFireRate = levelData.FireRate;
-        currentRange = levelData.Range;
+        // Удаляем/деактивируем старую модель
+        if (currentModel != null)
+        {
+            Destroy(currentModel); // Или currentModel.SetActive(false), если хочешь кэшировать
+        }
+
+        // Инстанцируем новую модель
+        if (levelData.ModelPrefab != null)
+        {
+            Transform parent = modelSlot != null ? modelSlot : transform;
+            currentModel = Instantiate(levelData.ModelPrefab, parent.position, parent.rotation, parent);
+        }
+        else
+        {
+            Debug.LogWarning("No ModelPrefab assigned for level " + currentLevel);
+        }
     }
 
     private void FindTarget()

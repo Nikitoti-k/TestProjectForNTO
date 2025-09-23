@@ -562,6 +562,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 561f66e113aafdd4381ce489f7add961, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  data: {fileID: 11400000, guid: c44d83317af782b479e6acd011b3cbcf, type: 2}
   maxHealth: 1000
 --- !u!208 &4677324283369957967
 NavMeshObstacle:
