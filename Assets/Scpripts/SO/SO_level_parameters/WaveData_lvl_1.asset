@@ -15,8 +15,8 @@ MonoBehaviour:
   Waves:
   - Enemies:
     - EnemyPrefab: {fileID: 6075044335832665027, guid: 5f2534d42d510cf408f1a27f0095916d, type: 3}
-      Count: 4
-      Interval: 0.3
+      Count: 60
+      Interval: 0.2
       IntervalCurve:
         serializedVersion: 2
         m_Curve:

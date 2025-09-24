@@ -1,3 +1,4 @@
+// Кастомный редактор для BuildingData, отображает поля в инспекторе.
 using UnityEditor;
 using UnityEngine;
 
@@ -7,15 +8,15 @@ public class BuildingDataEditor : Editor
     public override void OnInspectorGUI()
     {
         BuildingData data = (BuildingData)target;
-        serializedObject.Update(); // Синхронизируем данные перед редактированием
+        serializedObject.Update();
 
-        // Рисуем поле Levels
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("name"), new GUIContent("Building Name"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("maxHPDisplayName"), new GUIContent("Max HP Display Name"));
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("costDisplayName"), new GUIContent("Cost Display Name"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("Levels"), true);
-
-        // Рисуем поле Modules
         EditorGUILayout.PropertyField(serializedObject.FindProperty("Modules"), true);
 
-        // Проверка синхронизации уровней для каждого модуля
+        // Проверяет синхронизацию уровней между BuildingData и модулями
         if (data.Modules != null)
         {
             for (int i = 0; i < data.Modules.Count; i++)
@@ -23,7 +24,7 @@ public class BuildingDataEditor : Editor
                 var module = data.Modules[i];
                 if (module == null)
                 {
-                    EditorGUILayout.HelpBox($"Module at index {i} is null! Please assign a valid module.", MessageType.Error);
+                    EditorGUILayout.HelpBox($"Модуль на индексе {i} не задан!", MessageType.Error);
                     continue;
                 }
 
@@ -31,12 +32,11 @@ public class BuildingDataEditor : Editor
                 var levelData = so.FindProperty("LevelData");
                 if (levelData != null && levelData.arraySize != data.Levels.Count)
                 {
-                    EditorGUILayout.HelpBox($"Module {module.name} has {levelData.arraySize} levels, but BuildingData has {data.Levels.Count} levels!", MessageType.Warning);
+                    EditorGUILayout.HelpBox($"Модуль {module.name} имеет {levelData.arraySize} уровней, а BuildingData — {data.Levels.Count}!", MessageType.Warning);
                 }
             }
         }
 
-        // Применяем изменения и сохраняем
         if (GUI.changed)
         {
             EditorUtility.SetDirty(target);
@@ -44,10 +44,10 @@ public class BuildingDataEditor : Editor
             {
                 if (module != null)
                 {
-                    EditorUtility.SetDirty(module); // Сохраняем изменения в модулях
+                    EditorUtility.SetDirty(module);
                 }
             }
         }
-        serializedObject.ApplyModifiedProperties(); // Применяем изменения
+        serializedObject.ApplyModifiedProperties();
     }
 }

@@ -15,4 +15,5 @@ MonoBehaviour:
   Buildings:
   - BuildingPrefab: {fileID: 3098696103645479565, guid: 230f52415b362934d9cc9f13914e4fc4, type: 3}
     BuildingData: {fileID: 11400000, guid: c44d83317af782b479e6acd011b3cbcf, type: 2}
-    DisplayName: "\u0422\u0443\u0440\u0435\u043B\u044C"
+  - BuildingPrefab: {fileID: 7760023427451860119, guid: 266de162b7d6f3f4bad9514df7ee6822, type: 3}
+    BuildingData: {fileID: 11400000, guid: ec57b56e65b48e44cac4291b7ced6b39, type: 2}

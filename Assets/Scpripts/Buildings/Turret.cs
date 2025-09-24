@@ -1,33 +1,37 @@
+// Управляет турелью: стрельба по врагам, улучшение, смена модели.
 using UnityEngine;
 
 public class Turret : BuildingBase
 {
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private Transform projectileSpawnPoint;
-
-    // Новое: Трансформ, куда ставить модель (например, child "ModelSlot" в префабе турели)
-    [SerializeField] private Transform modelSlot; // Assign в инспекторе (если null, используй transform)
+    [SerializeField] private Transform modelSlot;
 
     private float nextFireTime = 0f;
     private EnemyBase currentTarget;
     private float currentDamage;
     private float currentFireRate;
     private float currentRange;
-    private GameObject currentModel; // Текущая модель для удаления при апгрейде
+    private GameObject currentModel;
 
     public override void Initialize(HexCoord coord)
     {
         base.Initialize(coord);
-        // Инициализируем модель для уровня 0
         UpgradeToLevel(0);
     }
 
     private void Update()
     {
-        if (data == null) return;
+        if (data == null)
+        {
+            return;
+        }
 
         var turretModule = GetModule<TurretModule>();
-        if (turretModule == null) return;
+        if (turretModule == null)
+        {
+            return;
+        }
 
         if (currentTarget != null)
         {
@@ -50,6 +54,7 @@ public class Turret : BuildingBase
         }
     }
 
+    // Стрельба: берёт снаряд из пула и инициализирует его
     private void Attack(TurretModule module)
     {
         if (currentTarget == null || !currentTarget.gameObject.activeInHierarchy || ProjectilePool.Instance == null)
@@ -60,7 +65,6 @@ public class Turret : BuildingBase
         TurretProjectile projectile = ProjectilePool.Instance.GetProjectile();
         projectile.transform.position = projectileSpawnPoint != null ? projectileSpawnPoint.position : transform.position;
         projectile.Initialize(currentTarget, currentDamage);
-        Debug.Log($"Turret fires at {currentTarget.name} for {currentDamage} damage");
     }
 
     public override void Upgrade()
@@ -72,49 +76,61 @@ public class Turret : BuildingBase
     {
         base.UpgradeToLevel(level);
         var turretModule = GetModule<TurretModule>();
-        if (turretModule != null && turretModule.LevelData.Count > level)
+        if (turretModule == null || turretModule.LevelData.Count <= level)
         {
-            var levelData = turretModule.LevelData[level];
-            currentDamage = levelData.Damage;
-            currentFireRate = levelData.FireRate;
-            currentRange = levelData.Range;
-
-            // Новое: Смена модели
-            UpdateVisual(levelData);
+            return;
         }
+
+        var levelData = turretModule.LevelData[level];
+        currentDamage = levelData.Damage;
+        currentFireRate = levelData.FireRate;
+        currentRange = levelData.Range;
+        UpdateVisual(levelData);
     }
 
+    // Смена модели: уничтожает старую и создаёт новую на слоте
     private void UpdateVisual(TurretLevelData levelData)
     {
-        // Удаляем/деактивируем старую модель
         if (currentModel != null)
         {
-            Destroy(currentModel); // Или currentModel.SetActive(false), если хочешь кэшировать
+            Destroy(currentModel);
         }
 
-        // Инстанцируем новую модель
-        if (levelData.ModelPrefab != null)
+        if (levelData.ModelPrefab == null)
         {
-            Transform parent = modelSlot != null ? modelSlot : transform;
-            currentModel = Instantiate(levelData.ModelPrefab, parent.position, parent.rotation, parent);
+            return;
         }
-        else
-        {
-            Debug.LogWarning("No ModelPrefab assigned for level " + currentLevel);
-        }
+
+        Transform parent = modelSlot != null ? modelSlot : transform;
+        currentModel = Instantiate(levelData.ModelPrefab, parent.position, parent.rotation, parent);
     }
 
+    // Поиск ближайшего врага: использует OverlapSphere и сортирует по расстоянию
     private void FindTarget()
     {
         Collider[] hits = Physics.OverlapSphere(transform.position, currentRange, enemyLayer);
+        if (hits.Length == 0)
+        {
+            return;
+        }
+
+        EnemyBase closestEnemy = null;
+        float minDistance = float.MaxValue;
+
         foreach (var hit in hits)
         {
             EnemyBase enemy = hit.GetComponent<EnemyBase>();
             if (enemy != null && enemy.gameObject.activeInHierarchy)
             {
-                currentTarget = enemy;
-                return;
+                float distance = Vector3.Distance(transform.position, enemy.transform.position);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    closestEnemy = enemy;
+                }
             }
         }
+
+        currentTarget = closestEnemy;
     }
 }

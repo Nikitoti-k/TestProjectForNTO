@@ -1,5 +1,6 @@
+// —труктура дл€ координат в шестиугольной сетке.
 using UnityEngine;
-// —труктурка дл€ работы с координатами в гексагональной сетке
+
 [System.Serializable]
 public struct HexCoord
 {
@@ -26,8 +27,26 @@ public struct HexCoord
 
     public override bool Equals(object obj)
     {
-        if (!(obj is HexCoord)) return false;
+        if (!(obj is HexCoord))
+        {
+            return false;
+        }
         HexCoord other = (HexCoord)obj;
         return q == other.q && r == other.r;
+    }
+
+    public static bool operator ==(HexCoord a, HexCoord b)
+    {
+        return a.q == b.q && a.r == b.r;
+    }
+
+    public static bool operator !=(HexCoord a, HexCoord b)
+    {
+        return !(a == b);
+    }
+
+    public static HexCoord operator +(HexCoord a, HexCoord b)
+    {
+        return new HexCoord(a.q + b.q, a.r + b.r);
     }
 }

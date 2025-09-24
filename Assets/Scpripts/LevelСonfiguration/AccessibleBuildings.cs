@@ -1,3 +1,4 @@
+// Хранит список доступных построек для интерфейса строительства.
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,6 +12,5 @@ public class AccessibleBuildings : ScriptableObject
 public class BuildingInfo
 {
     public GameObject BuildingPrefab;
-    public ScriptableObject BuildingData;
-    public string DisplayName;
+    public BuildingData BuildingData;
 }

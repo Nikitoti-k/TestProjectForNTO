@@ -1,16 +1,48 @@
+// Модуль стены, хранит параметры уровней.
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "WallModule", menuName = "Buildings/Modules/WallModule", order = 3)]
-public class WallModule : BuildingModule
+[CreateAssetMenu(fileName = "WallModule", menuName = "Buildings/Modules/WallModule", order = 4)]
+public class WallModule : BuildingModule, IUpgradeParameterProvider
 {
+    [SerializeField] private string armorBonusDisplayName = "Armor Bonus";
     public List<WallLevelData> LevelData = new List<WallLevelData>();
+
+    public string ArmorBonusDisplayName => armorBonusDisplayName;
+
+    public List<string> GetUpgradeParameters(int currentLevel)
+    {
+        List<string> parameters = new List<string>();
+        if (currentLevel < LevelData.Count - 1)
+        {
+            var currentData = LevelData[currentLevel];
+            var nextData = LevelData[currentLevel + 1];
+            if (!string.IsNullOrEmpty(ArmorBonusDisplayName))
+            {
+                parameters.Add($"{ArmorBonusDisplayName}: {currentData.ArmorBonus} -> {nextData.ArmorBonus}");
+            }
+        }
+        return parameters;
+    }
+
+    public List<string> GetCurrentParameters(int currentLevel)
+    {
+        List<string> parameters = new List<string>();
+        if (currentLevel < LevelData.Count)
+        {
+            var currentData = LevelData[currentLevel];
+            if (!string.IsNullOrEmpty(ArmorBonusDisplayName))
+            {
+                parameters.Add($"{ArmorBonusDisplayName}: {currentData.ArmorBonus}");
+            }
+        }
+        return parameters;
+    }
 }
 
 [System.Serializable]
 public class WallLevelData
 {
-    // Если ничего уникального, оставь пустым
-    // Или добавь, например, бонус к защите
-    public float ArmorBonus; // Пример: усиление брони
+    public float ArmorBonus;
+    public GameObject ModelPrefab;
 }

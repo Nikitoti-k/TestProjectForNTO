@@ -1,9 +1,12 @@
+// Управляет штабом: занимает гексагональную сетку, не поддерживает улучшения.
 using System.Collections.Generic;
 using UnityEngine;
 
 public class Headquarters : BuildingBase
 {
-    [SerializeField] private int maxHealth = 1000; // Здоровье в инспекторе
+    [SerializeField] private int maxHealth = 1000;
+    [SerializeField] private int baseCost = 1000;
+    [SerializeField] private float sellPriceMultiplier = 0.8f;
     private List<HexCoord> occupiedCoords = new List<HexCoord>();
 
     public override int CurrentHealth { get; protected set; }
@@ -24,15 +27,14 @@ public class Headquarters : BuildingBase
         {
             DestroyBuilding();
         }
-        Debug.Log($"Headquarters health: {CurrentHealth}");
     }
 
     protected override void DestroyBuilding()
     {
         base.DestroyBuilding();
-        Debug.Log("Headquarters destroyed! Game Over!");
     }
 
+    // Возвращает соседние гексы для занятия штабом
     private List<HexCoord> GetNeighborCoords(HexCoord center)
     {
         var directions = new HexCoord[]
@@ -43,22 +45,55 @@ public class Headquarters : BuildingBase
         var neighbors = new List<HexCoord>();
         foreach (var dir in directions)
         {
-            var neighbor = new HexCoord(center.q + dir.q, center.r + dir.r);
-            neighbors.Add(neighbor);
+            neighbors.Add(new HexCoord(center.q + dir.q, center.r + dir.r));
         }
         return neighbors;
     }
 
-    // Переопределяем Upgrade, так как Headquarters не использует BuildingData
     public override void Upgrade()
     {
-        // Можно оставить пустым или добавить логику, если апгрейды нужны
-        Debug.Log("Headquarters upgrade not implemented.");
     }
 
     protected override void UpgradeToLevel(int level)
     {
         currentLevel = level;
-        CurrentHealth = maxHealth; // Здоровье не меняется, или можно добавить логику
+        CurrentHealth = maxHealth;
+    }
+
+    public override int GetUpgradeCost()
+    {
+        return 0;
+    }
+
+    public override int GetSellPrice()
+    {
+        return Mathf.FloorToInt(baseCost * sellPriceMultiplier);
+    }
+
+    public override bool CanUpgrade()
+    {
+        return false;
+    }
+
+    public override void Sell()
+    {
+        int sellPrice = GetSellPrice();
+        CurrencyManager.Instance.AddCurrency(sellPrice);
+        DestroyBuilding();
+    }
+
+    public override List<string> GetUpgradeParameters()
+    {
+        return new List<string>();
+    }
+
+    public override string GetLevelDisplay()
+    {
+        return "Макс. уровень";
+    }
+
+    public override string GetBuildingName()
+    {
+        return "Штаб";
     }
 }
