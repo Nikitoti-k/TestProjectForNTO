@@ -15,19 +15,23 @@ MonoBehaviour:
   damageDisplayName: "\u0423\u0440\u043E\u043D"
   fireRateDisplayName: "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u0435\u043B\u044C\u043D\u043E\u0441\u0442\u044C"
   rangeDisplayName: "\u0414\u0430\u043B\u044C\u043D\u043E\u0441\u0442\u044C"
+  projectileSpeedDisplayName: "\u0421\u043A\u043E\u0440\u043E\u0441\u0442\u044C \u043F\u0443\u043B\u044C"
   LevelData:
   - Damage: 10
     FireRate: 1
     Range: 5
+    ProjectileSpeed: 10
     ProjectilePrefab: {fileID: 7520475760011816767, guid: 31954620633976f478ba75d06f513a16, type: 3}
     ModelPrefab: {fileID: 296473714273952512, guid: 092446e09160b3e43ae1fc477ab01bf7, type: 3}
   - Damage: 20
     FireRate: 2
     Range: 7
+    ProjectileSpeed: 10
     ProjectilePrefab: {fileID: 7520475760011816767, guid: 31954620633976f478ba75d06f513a16, type: 3}
     ModelPrefab: {fileID: 296473714273952512, guid: 092446e09160b3e43ae1fc477ab01bf7, type: 3}
   - Damage: 30
     FireRate: 3
     Range: 9
+    ProjectileSpeed: 20
     ProjectilePrefab: {fileID: 7520475760011816767, guid: 31954620633976f478ba75d06f513a16, type: 3}
     ModelPrefab: {fileID: 296473714273952512, guid: 092446e09160b3e43ae1fc477ab01bf7, type: 3}

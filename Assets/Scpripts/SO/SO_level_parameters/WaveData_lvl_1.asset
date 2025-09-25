@@ -15,8 +15,8 @@ MonoBehaviour:
   Waves:
   - Enemies:
     - EnemyPrefab: {fileID: 6075044335832665027, guid: 5f2534d42d510cf408f1a27f0095916d, type: 3}
-      Count: 60
-      Interval: 0.2
+      Count: 180
+      Interval: 0
       IntervalCurve:
         serializedVersion: 2
         m_Curve:
@@ -56,4 +56,4 @@ MonoBehaviour:
     UseRandomFronts: 0
     UseCircleSpawn: 0
     CircleSpawnRadius: 10
-    Reward: 0
+    Reward: 1000

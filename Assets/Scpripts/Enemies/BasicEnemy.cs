@@ -1,25 +1,26 @@
 ﻿using UnityEngine;
 using UnityEngine.AI;
+using System.Collections;
 
 [RequireComponent(typeof(NavMeshAgent))]
 public class BasicEnemy : EnemyBase
 {
-    private NavMeshAgent agent;
-    private Vector3 targetPosition; // Позиция штаба
-    private BuildingBase currentTarget; // Текущая цель 
-    [SerializeField] private LayerMask buildingLayer;
+    private NavMeshAgent _agent;
+    private Vector3 _hqPosition; // Позиция штаба (HQ)
+    private BuildingBase _currentTarget; // Текущая цель (здание)
+    [SerializeField] private LayerMask _buildingLayer;
 
     public override void Initialize()
     {
         base.Initialize();
-        agent = GetComponent<NavMeshAgent>();
-        if (agent == null)
+        _agent = GetComponent<NavMeshAgent>();
+        if (_agent == null)
         {
-            Debug.LogWarning($"{name}: NavMeshAgent is missing!");
+            Debug.LogWarning($"{name}: NavMeshAgent отсутствует!");
             return;
         }
-        agent.speed = data.Speed;
-        agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+        _agent.speed = data.Speed;
+        _agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
 
         var hexGrid = FindObjectOfType<HexGrid>();
         if (hexGrid != null)
@@ -27,42 +28,84 @@ public class BasicEnemy : EnemyBase
             var hq = hexGrid.GetHeadquarters();
             if (hq != null)
             {
-                targetPosition = hq.Position;
+                _hqPosition = hq.Position;
             }
+            else
+            {
+                Debug.LogWarning($"{name}: Штаб (Headquarters) не найден!");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"{name}: HexGrid не найден!");
+        }
+
+        // Не запускаем корутину здесь, движение начнётся в OnEnable
+        if (!gameObject.activeInHierarchy)
+        {
+            Debug.Log($"{name}: Объект неактивен, движение начнётся при активации в OnEnable");
+        }
+    }
+
+    private void OnEnable()
+    {
+        // Когда объект активируется, пробуем начать движение
+        if (_agent != null && _agent.isOnNavMesh)
+        {
+            StartCoroutine(WaitAndMove());
+        }
+        else
+        {
+            Debug.LogWarning($"{name}: Не удалось начать движение в OnEnable: агент не на NavMesh или отсутствует");
+        }
+    }
+
+    private IEnumerator WaitAndMove()
+    {
+        yield return null; // Ждём один кадр для активации агента на NavMesh
+        if (_agent != null && _agent.isOnNavMesh)
+        {
+            Move();
+            Debug.Log($"{name}: Движение начато после задержки");
+        }
+        else
+        {
+            Debug.LogWarning($"{name}: Агент не на NavMesh после задержки!");
         }
     }
 
     private void Update()
     {
-        if (data == null || agent == null) return;
+        if (data == null || _agent == null || !_agent.isOnNavMesh) return;
 
-        if (currentTarget != null)
+        if (_currentTarget != null)
         {
-            // Проверяем, жива ли цель
-            if (!currentTarget.gameObject.activeInHierarchy)
+            // Проверяем, активна ли цель
+            if (!_currentTarget.gameObject.activeInHierarchy)
             {
-                currentTarget = null;
-                agent.isStopped = false;
+                _currentTarget = null;
+                _agent.isStopped = false;
                 CheckForBuildings();
                 Move();
             }
-            else if (Vector3.Distance(transform.position, currentTarget.Position) <= GetAttackRange())
+            else if (Vector3.Distance(transform.position, _currentTarget.Position) <= GetEffectiveAttackRange(_currentTarget))
             {
-                agent.isStopped = true; 
+                _agent.isStopped = true;
                 if (CanAttack())
                 {
-                    AttackTarget(currentTarget);
+                    AttackTarget(_currentTarget);
                     ResetAttackTimer();
                 }
             }
             else
             {
-                agent.isStopped = false;
+                _agent.isStopped = false;
                 Move();
             }
         }
         else
         {
+            // Ищем здания, если нет текущей цели
             CheckForBuildings();
             Move();
         }
@@ -70,13 +113,15 @@ public class BasicEnemy : EnemyBase
 
     protected override void Move()
     {
-        if (data == null || agent == null) return;
+        if (data == null || _agent == null || !_agent.isOnNavMesh) return;
 
-        Vector3 destination = currentTarget != null ? currentTarget.Position : targetPosition;
-        if (agent.destination != destination)
+        // Выбираем цель: здание или HQ
+        Vector3 destination = _currentTarget != null ? _currentTarget.Position : _hqPosition;
+        if (_agent.destination != destination)
         {
-            Vector3 offset = Random.insideUnitCircle * GetAttackRange(); 
-            agent.SetDestination(destination + new Vector3(offset.x, 0f, offset.y));
+            float range = _currentTarget != null ? GetEffectiveAttackRange(_currentTarget) : GetAttackRange();
+            Vector3 offset = Random.insideUnitCircle * range;
+            _agent.SetDestination(destination + new Vector3(offset.x, 0f, offset.y));
         }
     }
 
@@ -84,23 +129,34 @@ public class BasicEnemy : EnemyBase
     {
         if (data == null) return;
         target.TakeDamage(data.Damage);
-        Debug.Log($"Enemy attacks {target.name} for {data.Damage} damage");
+        Debug.Log($"Враг атакует {target.name} на {data.Damage} урона");
     }
 
     private void CheckForBuildings()
     {
         if (data == null) return;
-        Collider[] hits = Physics.OverlapSphere(transform.position, GetDetectionRange(), buildingLayer);
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, GetDetectionRange(), _buildingLayer);
         BuildingBase closestBuilding = null;
         float minDistance = float.MaxValue;
+
+        // Направление к HQ
+        Vector3 directionToHQ = (_hqPosition - transform.position).normalized;
 
         foreach (var hit in hits)
         {
             BuildingBase building = hit.GetComponent<BuildingBase>();
-            if (building != null && building.gameObject.activeInHierarchy)
+            if (building == null || !building.gameObject.activeInHierarchy) continue;
+
+            float distance = Vector3.Distance(transform.position, building.Position);
+            // Проверяем, ближе ли здание, чем HQ (включая равенство для самого HQ)
+            float distToHQ = Vector3.Distance(transform.position, _hqPosition);
+            if (distance < minDistance && distance <= distToHQ)
             {
-                float distance = Vector3.Distance(transform.position, building.Position);
-                if (distance < minDistance)
+                // Проверяем угол: здание должно быть в пределах 180 градусов от направления к HQ
+                Vector3 directionToBuilding = (building.Position - transform.position).normalized;
+                float angle = Vector3.Angle(directionToHQ, directionToBuilding);
+                if (angle <= 90f) // Половина от 180 градусов
                 {
                     minDistance = distance;
                     closestBuilding = building;
@@ -108,6 +164,21 @@ public class BasicEnemy : EnemyBase
             }
         }
 
-        currentTarget = closestBuilding;
+        _currentTarget = closestBuilding;
+        if (_currentTarget != null)
+        {
+            Debug.Log($"{name}: Новая цель: {_currentTarget.name}");
+        }
+    }
+
+    protected float GetEffectiveAttackRange(BuildingBase target)
+    {
+        float baseRange = GetAttackRange();
+        // Для штаба увеличиваем радиус атаки, чтобы учитывать его размер (7 клеток)
+        if (target is Headquarters)
+        {
+            return baseRange * 4f; // Умножаем на коэффициент, чтобы враги останавливались дальше от центра
+        }
+        return baseRange;
     }
 }

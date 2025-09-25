@@ -12,6 +12,7 @@ public class Turret : BuildingBase
     private float currentDamage;
     private float currentFireRate;
     private float currentRange;
+    private float currentProjectileSpeed; // Новый: текущая скорость снаряда
     private GameObject currentModel;
 
     public override void Initialize(HexCoord coord)
@@ -64,7 +65,7 @@ public class Turret : BuildingBase
 
         TurretProjectile projectile = ProjectilePool.Instance.GetProjectile();
         projectile.transform.position = projectileSpawnPoint != null ? projectileSpawnPoint.position : transform.position;
-        projectile.Initialize(currentTarget, currentDamage);
+        projectile.Initialize(currentTarget, currentDamage, currentProjectileSpeed); // Изменено: добавлен параметр скорости
     }
 
     public override void Upgrade()
@@ -85,6 +86,7 @@ public class Turret : BuildingBase
         currentDamage = levelData.Damage;
         currentFireRate = levelData.FireRate;
         currentRange = levelData.Range;
+        currentProjectileSpeed = levelData.ProjectileSpeed; // Новый: устанавливаем скорость снаряда
         UpdateVisual(levelData);
     }
 

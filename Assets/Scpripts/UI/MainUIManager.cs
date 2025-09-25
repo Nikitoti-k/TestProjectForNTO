@@ -1,7 +1,7 @@
-// Управляет основным интерфейсом: отображает кнопки построек, валюту и кнопку старта волны.
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class MainUIManager : MonoBehaviour
 {
@@ -14,6 +14,11 @@ public class MainUIManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI errorText;
     [SerializeField] private float errorDisplayTime = 2f;
     [SerializeField] private Button startWaveButton;
+    [SerializeField] private GameObject defeatPanel; // Панель поражения
+    [SerializeField] private Button mainMenuButton; // Кнопка "В главное меню"
+    [SerializeField] private Button restartButton; // Кнопка "Начать заново"
+    [SerializeField] private string mainMenuSceneName = "MainMenu"; // Имя сцены главного меню
+    [SerializeField] private Headquarters headquarters; // Прямая ссылка на штаб
 
     private void Awake()
     {
@@ -89,8 +94,49 @@ public class MainUIManager : MonoBehaviour
             }
             SetWaveButtonActive(true);
         }
-    }
 
+        // Инициализация UI поражения
+        if (defeatPanel == null || mainMenuButton == null || restartButton == null)
+        {
+            throw new System.NullReferenceException("Не заданы: defeatPanel, mainMenuButton или restartButton");
+        }
+        defeatPanel.SetActive(false); // Скрываем панель поражения по умолчанию
+        mainMenuButton.onClick.AddListener(GoToMainMenu);
+        restartButton.onClick.AddListener(RestartGame);
+
+        // Подписываемся на событие поражения
+        if (headquarters != null)
+        {
+            headquarters.OnDefeat.AddListener(ShowDefeatUI);
+            Debug.Log("MainUIManager: Подписан на событие OnDefeat штаба");
+        }
+        else
+        {
+            Debug.LogWarning("Штаб (Headquarters) не задан в инспекторе!");
+            headquarters = FindObjectOfType<Headquarters>();
+            if (headquarters != null)
+            {
+                headquarters.OnDefeat.AddListener(ShowDefeatUI);
+                Debug.Log("MainUIManager: Штаб найден через FindObjectOfType");
+            }
+            else
+            {
+                Debug.LogWarning("Штаб (Headquarters) не найден на сцене!");
+            }
+        }
+    }
+    private void Update()
+    {
+        if (headquarters == null)
+        {
+            headquarters = FindObjectOfType<Headquarters>();
+            if (headquarters != null)
+            {
+                headquarters.OnDefeat.AddListener(ShowDefeatUI);
+
+            }
+        }
+    }
     private void UpdateCurrencyUI(int amount)
     {
         if (currencyText == null)
@@ -127,5 +173,24 @@ public class MainUIManager : MonoBehaviour
             throw new System.NullReferenceException("Не задан: startWaveButton");
         }
         startWaveButton.gameObject.SetActive(active);
+    }
+
+    private void ShowDefeatUI()
+    {
+        Debug.Log("MainUIManager: Показываем UI поражения");
+        defeatPanel.SetActive(true);
+        Time.timeScale = 0f; // Приостанавливаем игру
+    }
+
+    private void GoToMainMenu()
+    {
+        Time.timeScale = 1f; // Возвращаем нормальное время
+        SceneManager.LoadScene(mainMenuSceneName);
+    }
+
+    private void RestartGame()
+    {
+        Time.timeScale = 1f; // Возвращаем нормальное время
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }

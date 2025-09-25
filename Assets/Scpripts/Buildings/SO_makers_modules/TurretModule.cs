@@ -8,11 +8,13 @@ public class TurretModule : BuildingModule, IUpgradeParameterProvider
     [SerializeField] private string damageDisplayName = "Damage";
     [SerializeField] private string fireRateDisplayName = "Fire Rate";
     [SerializeField] private string rangeDisplayName = "Range";
+    [SerializeField] private string projectileSpeedDisplayName = "Projectile Speed"; // Новый: отображение для скорости снаряда
     public List<TurretLevelData> LevelData = new List<TurretLevelData>();
 
     public string DamageDisplayName => damageDisplayName;
     public string FireRateDisplayName => fireRateDisplayName;
     public string RangeDisplayName => rangeDisplayName;
+    public string ProjectileSpeedDisplayName => projectileSpeedDisplayName; // Новый: геттер для отображения
 
     public List<string> GetUpgradeParameters(int currentLevel)
     {
@@ -35,6 +37,10 @@ public class TurretModule : BuildingModule, IUpgradeParameterProvider
         if (!string.IsNullOrEmpty(RangeDisplayName))
         {
             parameters.Add($"{RangeDisplayName}: {currentData.Range} -> {nextData.Range}");
+        }
+        if (!string.IsNullOrEmpty(ProjectileSpeedDisplayName))
+        {
+            parameters.Add($"{ProjectileSpeedDisplayName}: {currentData.ProjectileSpeed} -> {nextData.ProjectileSpeed}"); // Новый: добавлено отображение скорости
         }
         return parameters;
     }
@@ -60,16 +66,20 @@ public class TurretModule : BuildingModule, IUpgradeParameterProvider
         {
             parameters.Add($"{RangeDisplayName}: {currentData.Range}");
         }
+        if (!string.IsNullOrEmpty(ProjectileSpeedDisplayName))
+        {
+            parameters.Add($"{ProjectileSpeedDisplayName}: {currentData.ProjectileSpeed}"); // Новый: добавлено отображение скорости
+        }
         return parameters;
     }
 }
-
 [System.Serializable]
 public class TurretLevelData
 {
     public float Damage;
     public float FireRate;
     public float Range;
+    public float ProjectileSpeed = 10f; // Новый: скорость снаряда по умолчанию 10
     public GameObject ProjectilePrefab;
     public GameObject ModelPrefab;
 }
