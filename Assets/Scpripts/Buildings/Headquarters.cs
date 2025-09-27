@@ -6,119 +6,95 @@ public class Headquarters : BuildingBase
 {
     private List<HexCoord> occupiedCoords = new List<HexCoord>();
     public List<HexCoord> OccupiedCoords => occupiedCoords;
-    public UnityEvent OnDefeat = new UnityEvent(); // Событие поражения
+    public UnityEvent OnDefeat = new UnityEvent();
 
     public override void Initialize(HexCoord centerCoord)
     {
         base.Initialize(centerCoord);
-        UpgradeToLevel(0); // Инициализируем уровень и здоровье
+        occupiedCoords.Clear();
         occupiedCoords.Add(centerCoord);
-        occupiedCoords.AddRange(GetNeighborCoords(centerCoord));
-        Debug.Log($"{name}: Инициализирован на координатах {centerCoord}, здоровье: {CurrentHealth}");
+        occupiedCoords.AddRange(HexGrid.Instance.GetNeighborCoords(centerCoord));
+        foreach (var coord in occupiedCoords)
+        {
+            if (HexGrid.Instance.Cells.TryGetValue(coord, out var cell))
+            {
+                cell.Occupy(this);
+            }
+        }
+        Debug.Log($"{name}: Initialized at {centerCoord}, HP: {CurrentHealth}, Occupied: {occupiedCoords.Count} cells");
     }
 
     public override void TakeDamage(int amount)
     {
-        Debug.Log($"{name}: Получен урон {amount}, текущее здоровье: {CurrentHealth}");
+        Debug.Log($"{name}: Taking {amount} damage, HP left: {CurrentHealth - amount}");
         CurrentHealth -= amount;
         if (CurrentHealth <= 0)
         {
-            Debug.Log($"{name}: Здоровье <= 0, уничтожаем штаб");
+            Debug.Log($"{name}: HP <= 0, destroying HQ");
             DestroyBuilding();
-            OnDefeat.Invoke(); // Вызываем событие поражения
+            OnDefeat.Invoke();
         }
     }
 
     protected override void DestroyBuilding()
     {
-        if (HexGrid.Instance == null)
+        if (HexGrid.Instance != null)
         {
-            Debug.LogError($"{name}: HexGrid.Instance не найден!");
+            foreach (var coord in occupiedCoords)
+            {
+                HexGrid.Instance.FreeCell(coord);
+            }
+            Debug.Log($"{name}: Freed {occupiedCoords.Count} cells starting from {GridPosition}");
         }
         else
         {
-            Debug.Log($"{name}: Освобождаем клетку {GridPosition}");
-            HexGrid.Instance.FreeCell(GridPosition);
+            Debug.LogError($"{name}: No HexGrid!");
         }
-        Debug.Log($"{name}: Уничтожаем объект");
+        Debug.Log($"{name}: Destroying object");
         Destroy(gameObject);
-    }
-
-    // Возвращает соседние гексы для занятия штабом
-    private List<HexCoord> GetNeighborCoords(HexCoord center)
-    {
-        var directions = new HexCoord[]
-        {
-            new HexCoord(1, 0), new HexCoord(1, -1), new HexCoord(0, -1),
-            new HexCoord(-1, 0), new HexCoord(-1, 1), new HexCoord(0, 1)
-        };
-        var neighbors = new List<HexCoord>();
-        foreach (var dir in directions)
-        {
-            neighbors.Add(new HexCoord(center.q + dir.q, center.r + dir.r));
-        }
-        return neighbors;
     }
 
     public override void Upgrade()
     {
-        // Штаб не поддерживает улучшения
+        // No upgrade for HQ.
     }
 
-    protected override void UpgradeToLevel(int level)
+    public override void UpgradeToLevel(int level) // Изменено: public для сохранения.
     {
         currentLevel = level;
         if (data != null && data.Levels.Count > level)
         {
             CurrentHealth = data.Levels[level].MaxHealth;
-            Debug.Log($"{name}: Инициализировано здоровье: {CurrentHealth}");
+            UpdateVisual(level);
+            Debug.Log($"{name}: Set level {level}, HP: {CurrentHealth}");
         }
         else
         {
-            Debug.LogWarning($"{name}: Некорректный уровень или данные для штаба!");
-            CurrentHealth = data != null && data.Levels.Count > 0 ? data.Levels[0].MaxHealth : 1;
-            Debug.Log($"{name}: Установлено запасное здоровье: {CurrentHealth}");
+            Debug.LogWarning($"{name}: Invalid level {level} or missing data!");
+            CurrentHealth = data?.Levels[0].MaxHealth ?? 1;
+            Debug.Log($"{name}: Fallback HP: {CurrentHealth}");
         }
     }
 
-    public override int GetUpgradeCost()
-    {
-        return 0; // Штаб не улучшается
-    }
+    public override int GetUpgradeCost() => 0;
 
-    public override int GetSellPrice()
-    {
-        return 0; // Штаб нельзя продать
-    }
+    public override int GetSellPrice() => 0;
 
-    public override bool CanUpgrade()
-    {
-        return false; // Штаб не улучшается
-    }
+    public override bool CanUpgrade() => false;
 
     public override void Sell()
     {
-        // Штаб нельзя продать
+        // No sell for HQ.
     }
 
-    public override List<string> GetUpgradeParameters()
-    {
-        return new List<string>(); // Штаб не имеет параметров улучшения
-    }
+    public override List<string> GetUpgradeParameters() => new List<string>();
 
-    public override string GetLevelDisplay()
-    {
-        return "Макс. уровень"; // Штаб не имеет уровней
-    }
+    public override string GetLevelDisplay() => "Макс. уровень";
 
-    public override string GetBuildingName()
-    {
-        return "Штаб";
-    }
+    public override string GetBuildingName() => "Штаб";
 
-    // Блокирует открытие меню улучшений для штаба
     private void OnMouseDown()
     {
-        // Пустой метод, чтобы предотвратить вызов UI улучшений
+        // Block UI for HQ.
     }
 }

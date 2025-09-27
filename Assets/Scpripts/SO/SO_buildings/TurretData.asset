@@ -18,12 +18,12 @@ MonoBehaviour:
   Levels:
   - Cost: 100
     MaxHealth: 100
-    ModelPrefab: {fileID: 3098696103645479565, guid: 230f52415b362934d9cc9f13914e4fc4, type: 3}
+    Model_view: {fileID: 296473714273952512, guid: 092446e09160b3e43ae1fc477ab01bf7, type: 3}
   - Cost: 200
     MaxHealth: 200
-    ModelPrefab: {fileID: 3098696103645479565, guid: 230f52415b362934d9cc9f13914e4fc4, type: 3}
+    Model_view: {fileID: 296473714273952512, guid: 942462e9ead249747afd58d019b02508, type: 3}
   - Cost: 400
     MaxHealth: 400
-    ModelPrefab: {fileID: 3098696103645479565, guid: 230f52415b362934d9cc9f13914e4fc4, type: 3}
+    Model_view: {fileID: 296473714273952512, guid: 3bffb51d1176c484789ec156160d9f9c, type: 3}
   Modules:
   - {fileID: 11400000, guid: 47626710649338840b07906c4c236e43, type: 2}

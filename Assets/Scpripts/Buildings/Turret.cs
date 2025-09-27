@@ -1,138 +1,93 @@
-// Управляет турелью: стрельба по врагам, улучшение, смена модели.
+// Турель: атакует врагов в радиусе, использует пул снарядов. Наслед от BuildingBase.
 using UnityEngine;
+using System.Collections.Generic;
 
 public class Turret : BuildingBase
 {
     [SerializeField] private LayerMask enemyLayer;
-    [SerializeField] private Transform projectileSpawnPoint;
-    [SerializeField] private Transform modelSlot;
-
-    private float nextFireTime = 0f;
+    private float nextFireTime;
     private EnemyBase currentTarget;
-    private float currentDamage;
-    private float currentFireRate;
-    private float currentRange;
-    private float currentProjectileSpeed; // Новый: текущая скорость снаряда
-    private GameObject currentModel;
 
     public override void Initialize(HexCoord coord)
     {
         base.Initialize(coord);
-        UpgradeToLevel(0);
+        UpdateHealthBar();
     }
 
-    private void Update()
+    public override void TakeDamage(int amount)
     {
-        if (data == null)
-        {
-            return;
-        }
-
-        var turretModule = GetModule<TurretModule>();
-        if (turretModule == null)
-        {
-            return;
-        }
-
-        if (currentTarget != null)
-        {
-            if (Vector3.Distance(transform.position, currentTarget.transform.position) <= currentRange && currentTarget.gameObject.activeInHierarchy)
-            {
-                if (Time.time >= nextFireTime)
-                {
-                    Attack(turretModule);
-                    nextFireTime = Time.time + (1f / currentFireRate);
-                }
-            }
-            else
-            {
-                currentTarget = null;
-            }
-        }
-        else
-        {
-            FindTarget();
-        }
-    }
-
-    // Стрельба: берёт снаряд из пула и инициализирует его
-    private void Attack(TurretModule module)
-    {
-        if (currentTarget == null || !currentTarget.gameObject.activeInHierarchy || ProjectilePool.Instance == null)
-        {
-            return;
-        }
-
-        TurretProjectile projectile = ProjectilePool.Instance.GetProjectile();
-        projectile.transform.position = projectileSpawnPoint != null ? projectileSpawnPoint.position : transform.position;
-        projectile.Initialize(currentTarget, currentDamage, currentProjectileSpeed); // Изменено: добавлен параметр скорости
+        base.TakeDamage(amount);
+        UpdateHealthBar();
     }
 
     public override void Upgrade()
     {
         base.Upgrade();
+        UpdateHealthBar();
     }
 
-    protected override void UpgradeToLevel(int level)
+    private void Update()
     {
-        base.UpgradeToLevel(level);
+        if (!IsPlaced) return;
+
         var turretModule = GetModule<TurretModule>();
-        if (turretModule == null || turretModule.LevelData.Count <= level)
-        {
-            return;
-        }
+        if (turretModule == null || Time.time < nextFireTime) return;
 
-        var levelData = turretModule.LevelData[level];
-        currentDamage = levelData.Damage;
-        currentFireRate = levelData.FireRate;
-        currentRange = levelData.Range;
-        currentProjectileSpeed = levelData.ProjectileSpeed; // Новый: устанавливаем скорость снаряда
-        UpdateVisual(levelData);
+        if (currentTarget != null && currentTarget.gameObject.activeInHierarchy &&
+            Vector3.Distance(transform.position, currentTarget.transform.position) <= turretModule.LevelData[currentLevel].Range)
+        {
+            Fire(currentTarget);
+        }
+        else
+        {
+            FindTarget(turretModule.LevelData[currentLevel].Range);
+        }
     }
 
-    // Смена модели: уничтожает старую и создаёт новую на слоте
-    private void UpdateVisual(TurretLevelData levelData)
+    private void FindTarget(float range)
     {
-        if (currentModel != null)
-        {
-            Destroy(currentModel);
-        }
-
-        if (levelData.ModelPrefab == null)
-        {
-            return;
-        }
-
-        Transform parent = modelSlot != null ? modelSlot : transform;
-        currentModel = Instantiate(levelData.ModelPrefab, parent.position, parent.rotation, parent);
-    }
-
-    // Поиск ближайшего врага: использует OverlapSphere и сортирует по расстоянию
-    private void FindTarget()
-    {
-        Collider[] hits = Physics.OverlapSphere(transform.position, currentRange, enemyLayer);
-        if (hits.Length == 0)
-        {
-            return;
-        }
-
-        EnemyBase closestEnemy = null;
+        currentTarget = null;
+        Collider[] hits = Physics.OverlapSphere(transform.position, range, enemyLayer);
         float minDistance = float.MaxValue;
 
         foreach (var hit in hits)
         {
-            EnemyBase enemy = hit.GetComponent<EnemyBase>();
-            if (enemy != null && enemy.gameObject.activeInHierarchy)
+            if (hit.TryGetComponent<EnemyBase>(out var enemy) && enemy.gameObject.activeInHierarchy)
             {
                 float distance = Vector3.Distance(transform.position, enemy.transform.position);
                 if (distance < minDistance)
                 {
                     minDistance = distance;
-                    closestEnemy = enemy;
+                    currentTarget = enemy;
                 }
             }
         }
+    }
 
-        currentTarget = closestEnemy;
+    private void Fire(EnemyBase target)
+    {
+        var turretModule = GetModule<TurretModule>();
+        if (turretModule == null) return;
+
+        var projectile = ProjectilePool.Instance.GetProjectile();
+        projectile.transform.position = transform.position;
+        projectile.GetComponent<TurretProjectile>().Initialize(target, turretModule.LevelData[currentLevel].Damage, turretModule.LevelData[currentLevel].ProjectileSpeed);
+
+        nextFireTime = Time.time + (1f / turretModule.LevelData[currentLevel].FireRate);
+    }
+
+    private void UpdateHealthBar()
+    {
+        var turretModule = GetModule<TurretModule>();
+        if (turretModule != null)
+        {
+            HealthBarManager.Instance?.ShowHealthBar(this, CurrentHealth, data.Levels[currentLevel].MaxHealth, true);
+        }
+    }
+
+    protected override void DestroyBuilding()
+    {
+        HealthBarManager.Instance?.HideHealthBar(this);
+        base.DestroyBuilding();
     }
 }

@@ -1,3 +1,4 @@
+// Управляет пулом врагов, спавнит их в точках, singleton.
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -5,10 +6,10 @@ public class EnemyManager : MonoBehaviour
 {
     public static EnemyManager Instance { get; private set; }
 
-    [SerializeField] private BasicEnemy enemyPrefab; // Базовый для пула
+    [SerializeField] private BasicEnemy enemyPrefab;
     [SerializeField] private int poolSize = 20;
-    [SerializeField] private Transform[] spawnPoints; // Глобальные точки
-    public Transform[] SpawnPoints => spawnPoints; // Публичный геттер
+    [SerializeField] private Transform[] spawnPoints;
+    public Transform[] SpawnPoints => spawnPoints;
 
     private List<EnemyBase> enemyPool = new List<EnemyBase>();
 
@@ -61,7 +62,7 @@ public class EnemyManager : MonoBehaviour
         EnemyBase prefabEnemy = enemyPrefab.GetComponent<EnemyBase>();
         if (prefabEnemy == null)
         {
-            Debug.LogWarning($"Enemy prefab {enemyPrefab.name} has no EnemyBase component!");
+            Debug.LogWarning($"Enemy prefab {enemyPrefab.name} has no EnemyBase!");
             return null;
         }
 
@@ -82,7 +83,7 @@ public class EnemyManager : MonoBehaviour
     {
         if (spawnPoints == null || spawnPoints.Length == 0)
         {
-            Debug.LogWarning("No spawn points defined in EnemyManager!");
+            Debug.LogWarning("No spawn points in EnemyManager!");
             return transform;
         }
         return spawnPoints[Random.Range(0, spawnPoints.Length)];

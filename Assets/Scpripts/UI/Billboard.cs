@@ -5,7 +5,7 @@ public class Billboard : MonoBehaviour
     [SerializeField] private float tiltAngle = 30f; // Наклон Canvas для изометрии (0 = горизонтально, 45 = под камеру)
     private Camera mainCamera;
 
-    private void Start()
+    private void OnEnable()
     {
         mainCamera = Camera.main;
     }
@@ -23,6 +23,10 @@ public class Billboard : MonoBehaviour
             Quaternion lookRotation = Quaternion.LookRotation(-directionToCamera.normalized, Vector3.up);
             // Применяем наклон по X для изометрии
             transform.rotation = Quaternion.Euler(tiltAngle, lookRotation.eulerAngles.y, 0);
+        }
+        else
+        {
+            Debug.Log("Пизедц");
         }
     }
 }

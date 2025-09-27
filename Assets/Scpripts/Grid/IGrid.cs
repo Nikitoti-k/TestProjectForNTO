@@ -1,4 +1,4 @@
-// Интерфейс для управления шестиугольной сеткой.
+// Интерфейс для grid management - абстракция, чтоб mock или swap impl если нужно (SOLID: interface segregation).
 using UnityEngine;
 
 public interface IGrid

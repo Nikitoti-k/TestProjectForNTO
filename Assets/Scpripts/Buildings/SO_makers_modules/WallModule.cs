@@ -1,4 +1,4 @@
-// ћодуль стены, хранит параметры уровней.
+// ћодуль стены, хранит параметры брони дл€ уровней.
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -18,9 +18,7 @@ public class WallModule : BuildingModule, IUpgradeParameterProvider
             var currentData = LevelData[currentLevel];
             var nextData = LevelData[currentLevel + 1];
             if (!string.IsNullOrEmpty(ArmorBonusDisplayName))
-            {
                 parameters.Add($"{ArmorBonusDisplayName}: {currentData.ArmorBonus} -> {nextData.ArmorBonus}");
-            }
         }
         return parameters;
     }
@@ -32,9 +30,7 @@ public class WallModule : BuildingModule, IUpgradeParameterProvider
         {
             var currentData = LevelData[currentLevel];
             if (!string.IsNullOrEmpty(ArmorBonusDisplayName))
-            {
                 parameters.Add($"{ArmorBonusDisplayName}: {currentData.ArmorBonus}");
-            }
         }
         return parameters;
     }
@@ -44,5 +40,4 @@ public class WallModule : BuildingModule, IUpgradeParameterProvider
 public class WallLevelData
 {
     public float ArmorBonus;
-    public GameObject ModelPrefab;
 }

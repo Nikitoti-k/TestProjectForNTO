@@ -18,5 +18,5 @@ MonoBehaviour:
   Levels:
   - Cost: 0
     MaxHealth: 1000
-    ModelPrefab: {fileID: 255196765368776484, guid: 0f12241f8af2f6740870a91e47f26d24, type: 3}
+    Model_view: {fileID: 0}
   Modules: []

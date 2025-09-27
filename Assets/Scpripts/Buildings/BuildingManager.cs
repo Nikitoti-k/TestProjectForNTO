@@ -1,21 +1,23 @@
-// Управляет размещением построек: отображает превью и подтверждает установку.
 using UnityEngine;
 
+// Управляет строительством зданий: показывает превью, проверяет валидность, размещает.
 public class BuildingManager : MonoBehaviour
 {
     public static BuildingManager Instance { get; private set; }
     public bool IsBuildingMode => isBuildingMode;
 
-    [SerializeField] private HexGrid hexGrid;
-    [SerializeField] private Material previewValidMaterial;
-    [SerializeField] private Material previewInvalidMaterial;
+    [SerializeField] private HexGrid hexGrid; // Сетка для размещения зданий.
+    [SerializeField] private Material previewValidMaterial; // Материал для валидного превью.
+    [SerializeField] private Material previewInvalidMaterial; // Материал для невалидного.
 
-    private GameObject currentPreview;
-    private bool isBuildingMode = false;
-    private GameObject buildingPrefab;
-    private int currentBuildingCost;
+    private GameObject currentPreview; // Текущее превью здания.
+    private Renderer[] previewRenderers; // Кэш рендеров превью.
+    private bool isBuildingMode; // Активен ли режим строительства.
+    private GameObject buildingPrefab; // Префаб текущего здания.
+    private int currentBuildingCost; // Стоимость текущего здания.
 
-    private void Awake()
+    // Инициализация singleton.
+    void Awake()
     {
         if (Instance != null)
         {
@@ -25,17 +27,16 @@ public class BuildingManager : MonoBehaviour
         Instance = this;
     }
 
+    // Запускает режим строительства с указанным префабом и стоимостью.
     public void StartBuilding(GameObject prefab, int cost)
     {
         if (prefab == null || hexGrid == null || previewValidMaterial == null || previewInvalidMaterial == null)
         {
+            Debug.LogError("BuildingManager: Отсутствуют необходимые компоненты!");
             return;
         }
 
-        if (isBuildingMode && currentPreview != null)
-        {
-            Destroy(currentPreview);
-        }
+        EndBuildingMode(); // Очищаем предыдущее превью, если есть.
 
         buildingPrefab = prefab;
         currentBuildingCost = cost;
@@ -43,54 +44,44 @@ public class BuildingManager : MonoBehaviour
 
         currentPreview = Instantiate(buildingPrefab, Vector3.zero, Quaternion.identity);
         currentPreview.SetActive(false);
-        BuildingBase buildingBase = currentPreview.GetComponent<BuildingBase>();
-        if (buildingBase != null)
-        {
+
+        // Отключаем физику и скрипты для превью.
+        if (currentPreview.TryGetComponent<BuildingBase>(out var buildingBase))
             buildingBase.enabled = false;
-        }
 
         foreach (var collider in currentPreview.GetComponentsInChildren<Collider>())
-        {
             collider.enabled = false;
-        }
 
-        foreach (var renderer in currentPreview.GetComponentsInChildren<Renderer>())
-        {
-            renderer.material = previewValidMaterial;
-        }
+        previewRenderers = currentPreview.GetComponentsInChildren<Renderer>();
+        SetPreviewMaterial(previewValidMaterial);
     }
 
-    private void Update()
+    // Обновляет положение превью и обрабатывает клики.
+    void Update()
     {
-        if (!isBuildingMode || currentPreview == null)
-        {
-            return;
-        }
+        if (!isBuildingMode || currentPreview == null) return;
 
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         Plane groundPlane = new Plane(Vector3.up, hexGrid.transform.position.y);
         if (groundPlane.Raycast(ray, out float distance))
         {
             Vector3 hitPoint = ray.GetPoint(distance);
-            HexCell cell = hexGrid.GetCellFromWorldPos(hitPoint);
+            var cell = hexGrid.GetCellFromWorldPos(hitPoint);
             if (cell != null)
             {
                 currentPreview.transform.position = cell.WorldPosition;
                 currentPreview.transform.localScale = Vector3.one * hexGrid.CellSize * 0.8f;
                 currentPreview.SetActive(true);
 
+                // Проверяем валидность клетки и обновляем материал.
                 bool isValid = hexGrid.IsCellFree(cell.Coord);
-                Material currentMaterial = isValid ? previewValidMaterial : previewInvalidMaterial;
-                foreach (var renderer in currentPreview.GetComponentsInChildren<Renderer>())
-                {
-                    renderer.material = currentMaterial;
-                }
+                SetPreviewMaterial(isValid ? previewValidMaterial : previewInvalidMaterial);
 
-                if (Input.GetMouseButtonDown(0) && isValid)
+                // ЛКМ: строим, если клетка свободна и хватает валюты.
+                if (Input.GetMouseButtonDown(0) && isValid && CurrencyManager.Instance.CanAfford(currentBuildingCost))
                 {
-                    GameObject buildingObj = Instantiate(buildingPrefab, cell.WorldPosition, Quaternion.identity);
-                    BuildingBase building = buildingObj.GetComponent<BuildingBase>();
-                    if (building != null)
+                    var buildingObj = Instantiate(buildingPrefab, cell.WorldPosition, Quaternion.identity);
+                    if (buildingObj.TryGetComponent<BuildingBase>(out var building))
                     {
                         hexGrid.PlaceBuilding(cell.Coord, building);
                         CurrencyManager.Instance.SpendCurrency(currentBuildingCost);
@@ -100,16 +91,21 @@ public class BuildingManager : MonoBehaviour
             }
             else
             {
-                currentPreview.SetActive(false);
+                currentPreview.SetActive(false); // Скрываем превью вне сетки.
             }
         }
 
-        if (Input.GetMouseButtonDown(1))
-        {
-            EndBuildingMode();
-        }
+        if (Input.GetMouseButtonDown(1)) EndBuildingMode(); // ПКМ: отмена.
     }
 
+    // Устанавливает материал для превью.
+    private void SetPreviewMaterial(Material mat)
+    {
+        foreach (var renderer in previewRenderers)
+            renderer.material = mat;
+    }
+
+    // Завершает режим строительства.
     private void EndBuildingMode()
     {
         isBuildingMode = false;
@@ -118,6 +114,7 @@ public class BuildingManager : MonoBehaviour
             Destroy(currentPreview);
             currentPreview = null;
         }
+        previewRenderers = null;
         currentBuildingCost = 0;
     }
 }

@@ -1,4 +1,4 @@
-// Интерфейс для взаимодействия с постройками: улучшение, продажа, получение данных.
+// Интерфейс для UI взаимодействия со зданиями: upgrade/sell, get costs/params.
 using System.Collections.Generic;
 using UnityEngine;
 

@@ -15,8 +15,8 @@ MonoBehaviour:
   Waves:
   - Enemies:
     - EnemyPrefab: {fileID: 6075044335832665027, guid: 5f2534d42d510cf408f1a27f0095916d, type: 3}
-      Count: 180
-      Interval: 0
+      Count: 10
+      Interval: 1
       IntervalCurve:
         serializedVersion: 2
         m_Curve:
@@ -50,7 +50,7 @@ MonoBehaviour:
         m_PreInfinity: 2
         m_PostInfinity: 2
         m_RotationOrder: 4
-      UseCurve: 1
+      UseCurve: 0
     SpawnFrontPrefab: {fileID: 7120400873932644193, guid: 44e8761579c5ea94194c5ccadcb24c8f, type: 3}
     SpawnPointIndices: 00000000
     UseRandomFronts: 0

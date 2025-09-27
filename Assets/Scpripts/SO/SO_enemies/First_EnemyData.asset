@@ -18,3 +18,4 @@ MonoBehaviour:
   AttackRate: 1
   AttackRange: 0.55
   DetectionRange: 1000
+  Reward: 10

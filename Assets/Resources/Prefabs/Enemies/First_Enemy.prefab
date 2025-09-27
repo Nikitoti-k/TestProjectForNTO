@@ -126,7 +126,7 @@ MonoBehaviour:
   OnDeactivated:
     m_PersistentCalls:
       m_Calls: []
-  _buildingLayer:
+  buildingLayer:
     serializedVersion: 2
     m_Bits: 64
 --- !u!195 &6841361005972631465

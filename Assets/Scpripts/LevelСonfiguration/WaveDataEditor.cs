@@ -1,3 +1,4 @@
+// Кастомный редактор для WaveData: рендерит волны и точки спавна.
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
@@ -24,11 +25,37 @@ public class WaveDataEditor : Editor
             EditorGUILayout.LabelField($"Wave {i + 1}", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
 
-            // Рендерим поля Enemies и Reward
-            EditorGUILayout.PropertyField(enemies, new GUIContent("Enemies"));
-            EditorGUILayout.PropertyField(reward, new GUIContent("Reward"));
+            // Рендерим Enemies вручную для избежания ошибок с AnimationCurve
+            EditorGUILayout.LabelField("Enemies");
+            EditorGUI.indentLevel++;
+            for (int j = 0; j < enemies.arraySize; j++)
+            {
+                SerializedProperty enemy = enemies.GetArrayElementAtIndex(j);
+                SerializedProperty enemyPrefab = enemy.FindPropertyRelative("EnemyPrefab");
+                SerializedProperty count = enemy.FindPropertyRelative("Count");
+                SerializedProperty interval = enemy.FindPropertyRelative("Interval");
+                SerializedProperty intervalCurve = enemy.FindPropertyRelative("IntervalCurve");
+                SerializedProperty useCurve = enemy.FindPropertyRelative("UseCurve");
 
-            // Рендерим поля спавна
+                EditorGUILayout.PropertyField(enemyPrefab, new GUIContent("Enemy Prefab"));
+                EditorGUILayout.PropertyField(count, new GUIContent("Count"));
+                EditorGUILayout.PropertyField(useCurve, new GUIContent("Use Curve"));
+                if (useCurve.boolValue)
+                {
+                    EditorGUILayout.PropertyField(intervalCurve, new GUIContent("Interval Curve"));
+                }
+                else
+                {
+                    EditorGUILayout.PropertyField(interval, new GUIContent("Interval"));
+                }
+            }
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("+")) enemies.arraySize++;
+            if (GUILayout.Button("-") && enemies.arraySize > 0) enemies.arraySize--;
+            EditorGUILayout.EndHorizontal();
+            EditorGUI.indentLevel--;
+
+            EditorGUILayout.PropertyField(reward, new GUIContent("Reward"));
             EditorGUILayout.PropertyField(useCircleSpawn, new GUIContent("Use Circle Spawn"));
 
             if (useCircleSpawn.boolValue)
@@ -46,7 +73,11 @@ public class WaveDataEditor : Editor
                     if (prefab != null)
                     {
                         SpawnPointMap map = prefab.GetComponent<SpawnPointMap>();
-                        if (map != null)
+                        if (map == null)
+                        {
+                            EditorGUILayout.HelpBox($"No SpawnPointMap on {prefab.name}!", MessageType.Error);
+                        }
+                        else
                         {
                             List<Transform> points = map.GetSpawnPoints();
                             if (points == null || points.Count == 0)
@@ -55,51 +86,20 @@ public class WaveDataEditor : Editor
                             }
                             else
                             {
-                                List<string> pointNames = new List<string>();
-                                for (int j = 0; j < points.Count; j++)
-                                {
-                                    pointNames.Add(points[j].name);
-                                }
-
-                                // Множественный выбор точек
-                                int[] selectedIndices = spawnPointIndices.arraySize > 0 ? new int[spawnPointIndices.arraySize] : new int[0];
-                                for (int j = 0; j < selectedIndices.Length; j++)
-                                {
-                                    selectedIndices[j] = spawnPointIndices.GetArrayElementAtIndex(j).intValue;
-                                }
-
                                 EditorGUILayout.LabelField("Spawn Points");
                                 EditorGUI.indentLevel++;
-                                for (int j = 0; j < pointNames.Count; j++)
+                                spawnPointIndices.arraySize = EditorGUILayout.IntField("Point Count", spawnPointIndices.arraySize);
+                                for (int j = 0; j < spawnPointIndices.arraySize; j++)
                                 {
-                                    bool isSelected = System.Array.IndexOf(selectedIndices, j) >= 0;
-                                    bool newSelected = EditorGUILayout.Toggle(pointNames[j], isSelected);
-                                    if (newSelected != isSelected)
-                                    {
-                                        if (newSelected)
-                                        {
-                                            spawnPointIndices.arraySize++;
-                                            spawnPointIndices.GetArrayElementAtIndex(spawnPointIndices.arraySize - 1).intValue = j;
-                                        }
-                                        else
-                                        {
-                                            for (int k = 0; k < spawnPointIndices.arraySize; k++)
-                                            {
-                                                if (spawnPointIndices.GetArrayElementAtIndex(k).intValue == j)
-                                                {
-                                                    spawnPointIndices.DeleteArrayElementAtIndex(k);
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
+                                    int index = spawnPointIndices.GetArrayElementAtIndex(j).intValue;
+                                    index = EditorGUILayout.IntField($"Point {j + 1}", index);
+                                    if (index >= 0 && index < points.Count)
+                                        spawnPointIndices.GetArrayElementAtIndex(j).intValue = index;
+                                    else
+                                        EditorGUILayout.HelpBox($"Invalid index {index}, max: {points.Count - 1}", MessageType.Warning);
                                 }
                                 EditorGUI.indentLevel--;
                             }
-                        }
-                        else
-                        {
-                            EditorGUILayout.HelpBox($"No SpawnPointMap component on {prefab.name}!", MessageType.Error);
                         }
                     }
                 }

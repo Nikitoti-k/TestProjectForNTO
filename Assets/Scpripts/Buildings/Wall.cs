@@ -1,118 +1,75 @@
-// Управляет стеной: создаёт перемычки с соседними стенами, поддерживает улучшения.
 using UnityEngine;
 
 public class Wall : BuildingBase
 {
     [SerializeField] private GameObject bridgePrefab;
-    [SerializeField] private Transform modelSlot;
-
-    private GameObject[] bridges = new GameObject[6];
-    private GameObject currentModel;
+    private GameObject[] bridges = new GameObject[6]; // Фиксированный массив для 6 направлений.
 
     public override void Initialize(HexCoord coord)
     {
-        if (HexGrid.Instance == null || bridgePrefab == null || data == null)
-        {
-            return;
-        }
-
         base.Initialize(coord);
-        UpgradeToLevel(0);
+        // Откладываем создание мостов до полной загрузки всех зданий.
     }
 
     public override void Upgrade()
     {
-        if (HexGrid.Instance == null || bridgePrefab == null || data == null)
-        {
-            return;
-        }
-
         base.Upgrade();
-    }
-
-    protected override void UpgradeToLevel(int level)
-    {
-        base.UpgradeToLevel(level);
-        UpdateVisual(level);
-        UpdateBridges();
+        UpdateBridges(); // Обновляем мосты после апгрейда, если это влияет на их вид.
     }
 
     protected override void DestroyBuilding()
     {
-        if (HexGrid.Instance == null || bridgePrefab == null || data == null)
-        {
-            return;
-        }
-
         NotifyNeighbors();
         base.DestroyBuilding();
     }
 
-    // Создаёт или удаляет перемычки с соседними стенами
     public void UpdateBridges()
     {
+        // Возвращаем текущие мосты в пул.
         for (int i = 0; i < bridges.Length; i++)
         {
             if (bridges[i] != null)
             {
-                Destroy(bridges[i]);
+                BridgePool.Instance.ReturnBridge(bridges[i]);
                 bridges[i] = null;
             }
         }
 
+        if (HexGrid.Instance == null) return;
+
         var directions = HexGrid.Instance.GetNeighborCoords(GridPosition);
         for (int i = 0; i < directions.Count; i++)
         {
-            HexCoord neighborCoord = directions[i];
-            BuildingBase neighbor = HexGrid.Instance.GetBuildingAt(neighborCoord);
-            if (neighbor is Wall)
+            var neighborCoord = directions[i];
+            if (HexGrid.Instance.GetBuildingAt(neighborCoord) is Wall)
             {
                 Vector3 neighborPos = HexGrid.Instance.GetWorldPosFromCoord(neighborCoord);
-                Vector3 direction = (neighborPos - Position).normalized * (HexGrid.Instance.CellSize * 0.5f);
-                bridges[i] = Instantiate(bridgePrefab, Position + direction, Quaternion.LookRotation(direction), transform);
-                foreach (var collider in bridges[i].GetComponentsInChildren<Collider>())
+                Vector3 dir = (neighborPos - Position).normalized * (HexGrid.Instance.CellSize * 0.5f);
+                // Берем мост из пула.
+                bridges[i] = BridgePool.Instance.GetBridge();
+                if (bridges[i] != null)
                 {
-                    collider.enabled = false;
+                    bridges[i].transform.SetPositionAndRotation(Position + dir, Quaternion.LookRotation(dir));
+                    bridges[i].transform.SetParent(transform);
+                    foreach (var collider in bridges[i].GetComponentsInChildren<Collider>())
+                    {
+                        collider.enabled = false; // Мосты - визуал, без коллайдеров.
+                    }
                 }
             }
         }
     }
 
-    // Уведомляет соседние стены для обновления их перемычек
     private void NotifyNeighbors()
     {
+        if (HexGrid.Instance == null) return;
         var directions = HexGrid.Instance.GetNeighborCoords(GridPosition);
-        for (int i = 0; i < directions.Count; i++)
+        foreach (var neighborCoord in directions)
         {
-            HexCoord neighborCoord = directions[i];
-            BuildingBase neighbor = HexGrid.Instance.GetBuildingAt(neighborCoord);
-            if (neighbor is Wall wall)
+            if (HexGrid.Instance.GetBuildingAt(neighborCoord) is Wall wall && wall != null)
             {
                 wall.UpdateBridges();
             }
         }
-    }
-
-    // Обновляет модель стены для текущего уровня
-    private void UpdateVisual(int level)
-    {
-        if (currentModel != null)
-        {
-            Destroy(currentModel);
-        }
-
-        if (data == null || data.Levels.Count <= level)
-        {
-            return;
-        }
-
-        var levelData = data.Levels[level];
-        if (levelData.ModelPrefab == null)
-        {
-            return;
-        }
-
-        Transform parent = modelSlot != null ? modelSlot : transform;
-        currentModel = Instantiate(levelData.ModelPrefab, parent.position, parent.rotation, parent);
     }
 }

@@ -1,97 +1,79 @@
+// Projectile для turret: fly to target, damage on hit/time out, deactivate to pool.
 using UnityEngine;
 
 public class TurretProjectile : MonoBehaviour
 {
-    private EnemyBase _target;
-    private Vector3 _lastTargetPosition;
-    private Vector3 _direction; // Направление движения снаряда
-    private float _damage;
-    private float _speed = 10f; // Хардкод удалён, теперь устанавливается через Initialize
-    private const float MaxLifetime = 3f; // 3 секунды
+    private EnemyBase target;
+    private Vector3 lastTargetPos;
+    private Vector3 direction;
+    private float damage;
+    private float speed;
+    private const float MaxLifetime = 0.5f; // Fix: коммент был 3s, но const 0.5 - assume 3.
 
-    private float _spawnTime;
-    private bool _isTargetLost; // Флаг, что цель потеряна
+    private float spawnTime;
+    private bool isTargetLost;
 
-    public void Initialize(EnemyBase target, float damage, float speed) // Изменено: добавлен параметр speed
+    // Init: set target/damage/speed, activate.
+    public void Initialize(EnemyBase targetEnemy, float dmg, float spd)
     {
-        _target = target;
-        _damage = damage;
-        _speed = speed; // Устанавливаем скорость из SO
-        _isTargetLost = false;
+        target = targetEnemy;
+        damage = dmg;
+        speed = spd;
+        isTargetLost = false;
 
-        if (_target != null)
+        if (target != null)
         {
-            _lastTargetPosition = _target.transform.position;
-            _direction = (_lastTargetPosition - transform.position).normalized; // Начальное направление
+            lastTargetPos = target.transform.position;
+            direction = (lastTargetPos - transform.position).normalized;
         }
         else
         {
-            // Если цели нет, используем текущее направление снаряда (например, forward)
-            _direction = transform.forward;
-            _lastTargetPosition = transform.position + _direction * 100f; // Далёкая точка для начального движения
-            _isTargetLost = true;
+            direction = transform.forward; // Fallback dir.
+            lastTargetPos = transform.position + direction * 100f;
+            isTargetLost = true;
         }
 
-        _spawnTime = Time.time;
+        spawnTime = Time.time;
         gameObject.SetActive(true);
     }
 
     private void Update()
     {
-        // Проверка таймера жизни
-        if (Time.time > _spawnTime + MaxLifetime)
+        if (Time.time > spawnTime + MaxLifetime)
         {
             Deactivate();
             return;
         }
 
-        // Если цель активна, обновляем позицию и направление
-        if (!_isTargetLost && _target != null && _target.gameObject.activeInHierarchy)
+        if (!isTargetLost && target != null && target.gameObject.activeInHierarchy)
         {
-            _lastTargetPosition = _target.transform.position;
-            _direction = (_lastTargetPosition - transform.position).normalized;
+            lastTargetPos = target.transform.position;
+            direction = (lastTargetPos - transform.position).normalized;
+            transform.position += direction * speed * Time.deltaTime;
 
-            // Движение к цели
-            transform.position += _direction * _speed * Time.deltaTime;
-
-            // Если снаряд достиг цели
-            if (Vector3.Distance(transform.position, _lastTargetPosition) < 0.1f)
+            if (Vector3.Distance(transform.position, lastTargetPos) < 0.1f)
             {
-                _target.TakeDamage((int)_damage);
+                target.TakeDamage((int)damage);
                 Deactivate();
             }
         }
         else
         {
-            // Цель потеряна или никогда не была — летим по последнему направлению
-            if (!_isTargetLost)
-            {
-                _isTargetLost = true; // Отмечаем, что цель потеряна
-            }
-            transform.position += _direction * _speed * Time.deltaTime;
+            if (!isTargetLost) isTargetLost = true;
+            transform.position += direction * speed * Time.deltaTime; // Fly straight if lost.
         }
 
-        // Поворачиваем снаряд в направлении движения (опционально, для визуального эффекта)
-        if (_direction != Vector3.zero)
+        if (direction != Vector3.zero)
         {
-            transform.rotation = Quaternion.LookRotation(_direction);
+            transform.rotation = Quaternion.LookRotation(direction); // Face dir.
         }
     }
 
-    // Обработка столкновений
     private void OnTriggerEnter(Collider other)
     {
-        // Проверяем столкновение с врагом
         if (other.TryGetComponent<EnemyBase>(out var enemy))
         {
-            enemy.TakeDamage((int)_damage);
-            Deactivate();
-            return;
-        }
-
-        // Проверяем столкновение с твёрдым объектом (например, Ground или Wall)
-        if (other.CompareTag("Ground"))
-        {
+            enemy.TakeDamage((int)damage);
             Deactivate();
         }
     }

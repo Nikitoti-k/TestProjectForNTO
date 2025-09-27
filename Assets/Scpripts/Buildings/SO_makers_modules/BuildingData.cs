@@ -21,5 +21,5 @@ public class BuildingLevelData
 {
     public int Cost;
     public int MaxHealth;
-    public GameObject ModelPrefab;
+    public GameObject Model_view; // Модель для уровня, используется в BuildingBase.
 }

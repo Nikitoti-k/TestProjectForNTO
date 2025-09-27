@@ -1,7 +1,7 @@
+// Pool для projectiles: singleton, pre-inst + expand on demand.
 using System.Collections.Generic;
 using UnityEngine;
 
-// Паттерн пула для снарядов 
 public class ProjectilePool : MonoBehaviour
 {
     public static ProjectilePool Instance { get; private set; }
@@ -32,7 +32,7 @@ public class ProjectilePool : MonoBehaviour
     {
         for (int i = 0; i < poolSize; i++)
         {
-            TurretProjectile projectile = Instantiate(projectilePrefab, Vector3.zero, Quaternion.identity);
+            var projectile = Instantiate(projectilePrefab, Vector3.zero, Quaternion.identity);
             projectile.gameObject.SetActive(false);
             projectilePool.Add(projectile);
         }
@@ -42,13 +42,10 @@ public class ProjectilePool : MonoBehaviour
     {
         foreach (var projectile in projectilePool)
         {
-            if (!projectile.gameObject.activeInHierarchy)
-            {
-                return projectile;
-            }
+            if (!projectile.gameObject.activeInHierarchy) return projectile;
         }
-        // Расширяем пул, если все заняты
-        TurretProjectile newProjectile = Instantiate(projectilePrefab, Vector3.zero, Quaternion.identity);
+        // Expand: inst new if all busy.
+        var newProjectile = Instantiate(projectilePrefab, Vector3.zero, Quaternion.identity);
         newProjectile.gameObject.SetActive(false);
         projectilePool.Add(newProjectile);
         return newProjectile;

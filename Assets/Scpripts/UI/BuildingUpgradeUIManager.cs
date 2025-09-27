@@ -1,9 +1,8 @@
-// Управляет интерфейсом улучшения и продажи построек.
+// Управляет UI улучшения/продажи зданий, отображает параметры и кнопки.
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using TMPro;
-using System.Collections.Generic;
 
 public class BuildingUpgradeUIManager : MonoBehaviour
 {
@@ -33,7 +32,8 @@ public class BuildingUpgradeUIManager : MonoBehaviour
     {
         if (worldCanvas == null || upgradeButton == null || sellButton == null || parametersText == null || levelText == null || buildingNameText == null)
         {
-            throw new System.NullReferenceException("Не заданы: worldCanvas, upgradeButton, sellButton, parametersText, levelText или buildingNameText");
+            Debug.LogError("BuildingUpgradeUIManager: Missing UI components!");
+            return;
         }
 
         worldCanvas.gameObject.SetActive(false);
@@ -43,21 +43,13 @@ public class BuildingUpgradeUIManager : MonoBehaviour
 
     private void Update()
     {
-        if (currentBuilding == null)
-        {
-            return;
-        }
+        if (currentBuilding == null) return;
 
-        // Закрытие UI при клике вне постройки
-        if (Input.GetMouseButtonDown(0) && EventSystem.current != null && !EventSystem.current.IsPointerOverGameObject())
+        // Закрытие UI при клике вне здания.
+        if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            RaycastHit hit;
-            if (Physics.Raycast(ray, out hit) && hit.collider.GetComponent<IBuildingInteractable>() == null)
-            {
-                HideUI();
-            }
-            else if (!Physics.Raycast(ray, out hit))
+            if (!Physics.Raycast(ray, out var hit) || hit.collider.GetComponent<IBuildingInteractable>() == null)
             {
                 HideUI();
             }
@@ -68,10 +60,11 @@ public class BuildingUpgradeUIManager : MonoBehaviour
     {
         if (building == null)
         {
-            throw new System.NullReferenceException("Не задан: building");
+            Debug.LogError("BuildingUpgradeUIManager: Null building!");
+            return;
         }
 
-        if (currentBuilding != null && currentBuilding != building)
+        if (currentBuilding != building)
         {
             HideUI();
         }
@@ -83,20 +76,12 @@ public class BuildingUpgradeUIManager : MonoBehaviour
         bool isMaxLevel = building.GetLevelDisplay() == "Макс. уровень";
         upgradeButton.interactable = building.CanUpgrade() && !isMaxLevel;
         var upgradeText = upgradeButton.GetComponentInChildren<TextMeshProUGUI>();
-        if (upgradeText == null)
-        {
-            throw new System.NullReferenceException("Не задан: upgradeText");
-        }
         upgradeText.text = isMaxLevel ? "Макс." : $"Улучшить: {building.GetUpgradeCost()}";
 
         var sellText = sellButton.GetComponentInChildren<TextMeshProUGUI>();
-        if (sellText == null)
-        {
-            throw new System.NullReferenceException("Не задан: sellText");
-        }
         sellText.text = $"Продать: {building.GetSellPrice()}";
 
-        parametersText.text = building.GetUpgradeParameters().Count > 0 ? string.Join("\n", building.GetUpgradeParameters()) : "Нет доступных улучшений";
+        parametersText.text = building.GetUpgradeParameters().Count > 0 ? string.Join("\n", building.GetUpgradeParameters()) : "Нет улучшений";
         levelText.text = building.GetLevelDisplay();
         buildingNameText.text = building.GetBuildingName();
     }
@@ -109,26 +94,15 @@ public class BuildingUpgradeUIManager : MonoBehaviour
 
     private void OnUpgradeButtonClicked()
     {
-        if (currentBuilding == null || !currentBuilding.CanUpgrade())
-        {
-            return;
-        }
-
-        int cost = currentBuilding.GetUpgradeCost();
-        if (CurrencyManager.Instance.CanAfford(cost))
-        {
-            CurrencyManager.Instance.SpendCurrency(cost);
-            currentBuilding.Upgrade();
-            ShowUI(currentBuilding);
-        }
+        if (currentBuilding == null || !currentBuilding.CanUpgrade()) return;
+        CurrencyManager.Instance.SpendCurrency(currentBuilding.GetUpgradeCost());
+        currentBuilding.Upgrade();
+        ShowUI(currentBuilding);
     }
 
     private void OnSellButtonClicked()
     {
-        if (currentBuilding == null)
-        {
-            return;
-        }
+        if (currentBuilding == null) return;
         currentBuilding.Sell();
         HideUI();
     }

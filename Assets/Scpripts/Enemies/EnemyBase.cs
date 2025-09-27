@@ -1,27 +1,29 @@
+// Базовый класс для врагов: хэндлит HP, damage, движение, атаку. Абстрактный для Move/Attack.
 using UnityEngine;
 using UnityEngine.Events;
 
 public abstract class EnemyBase : MonoBehaviour
 {
     [SerializeField] protected EnemyData data;
-
     protected int currentHealth;
-    protected float nextAttackTime = 0f;
-    public UnityEvent<EnemyBase> OnDeactivated = new UnityEvent<EnemyBase>(); // Новое событие
+    protected float nextAttackTime;
+    public UnityEvent<EnemyBase> OnDeactivated = new UnityEvent<EnemyBase>();
 
     public virtual void Initialize()
     {
         if (data == null)
         {
-            Debug.LogWarning($"{name}: EnemyData is not assigned!");
+            Debug.LogWarning($"{name}: EnemyData is null!");
             return;
         }
         currentHealth = data.MaxHealth;
+        HealthBarManager.Instance?.ShowHealthBar(this, currentHealth, data.MaxHealth, false); // Показываем плашку.
     }
 
     public virtual void TakeDamage(int amount)
     {
         currentHealth -= amount;
+        HealthBarManager.Instance?.UpdateHealthBar(this, currentHealth, data.MaxHealth); // Обновляем плашку.
         if (currentHealth <= 0)
         {
             Deactivate();
@@ -30,14 +32,16 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void Deactivate()
     {
+        HealthBarManager.Instance?.HideHealthBar(this); // Скрываем плашку.
         gameObject.SetActive(false);
         OnDeactivated.Invoke(this);
+        if (CurrencyManager.Instance != null && data != null)
+        {
+            CurrencyManager.Instance.AddCurrency(data.Reward);
+        }
     }
 
-    protected bool CanAttack()
-    {
-        return Time.time >= nextAttackTime;
-    }
+    protected bool CanAttack() => Time.time >= nextAttackTime;
 
     protected void ResetAttackTimer()
     {
@@ -47,15 +51,9 @@ public abstract class EnemyBase : MonoBehaviour
         }
     }
 
-    protected float GetAttackRange()
-    {
-        return data != null ? data.AttackRange : 1f;
-    }
+    protected float GetAttackRange() => data?.AttackRange ?? 1f;
 
-    protected float GetDetectionRange()
-    {
-        return data != null ? data.DetectionRange : 5f;
-    }
+    protected float GetDetectionRange() => data?.DetectionRange ?? 5f;
 
     protected abstract void Move();
     protected abstract void AttackTarget(BuildingBase target);

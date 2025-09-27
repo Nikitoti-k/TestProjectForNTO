@@ -1,196 +1,43 @@
 using UnityEngine;
-using UnityEngine.UI;
-using TMPro;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class MainUIManager : MonoBehaviour
 {
-    public static MainUIManager Instance { get; private set; }
-
-    [SerializeField] private AccessibleBuildings accessibleBuildings;
-    [SerializeField] private GameObject buttonPrefab;
-    [SerializeField] private Transform buttonParent;
-    [SerializeField] private TextMeshProUGUI currencyText;
-    [SerializeField] private TextMeshProUGUI errorText;
-    [SerializeField] private float errorDisplayTime = 2f;
-    [SerializeField] private Button startWaveButton;
-    [SerializeField] private GameObject defeatPanel; // Панель поражения
-    [SerializeField] private Button mainMenuButton; // Кнопка "В главное меню"
-    [SerializeField] private Button restartButton; // Кнопка "Начать заново"
-    [SerializeField] private string mainMenuSceneName = "MainMenu"; // Имя сцены главного меню
-    [SerializeField] private Headquarters headquarters; // Прямая ссылка на штаб
+    [SerializeField] private Button newGameButton;
+    [SerializeField] private Button continueButton;
+    private string savePath;
 
     private void Awake()
     {
-        if (Instance != null)
+        savePath = System.IO.Path.Combine(Application.persistentDataPath, "save.json");
+
+        if (newGameButton == null || continueButton == null)
         {
-            Destroy(gameObject);
+            Debug.LogError("MainUIManager: Missing button references!");
             return;
         }
-        Instance = this;
+
+        newGameButton.onClick.AddListener(StartNewGame);
+        continueButton.onClick.AddListener(ContinueGame);
+
+        // Проверяем наличие сохранения и активируем/деактивируем кнопку "Продолжить".
+        continueButton.interactable = System.IO.File.Exists(savePath);
     }
 
-    private void Start()
+    private void StartNewGame()
     {
-        if (accessibleBuildings == null || buttonPrefab == null || buttonParent == null)
+        // Удаляем сохранение, если оно существует.
+        if (System.IO.File.Exists(savePath))
         {
-            throw new System.NullReferenceException("Не заданы: accessibleBuildings, buttonPrefab или buttonParent");
+            System.IO.File.Delete(savePath);
+            Debug.Log("MainUIManager: Save deleted for new game.");
         }
-
-        if (CurrencyManager.Instance != null)
-        {
-            CurrencyManager.Instance.OnCurrencyChanged.AddListener(UpdateCurrencyUI);
-            UpdateCurrencyUI(CurrencyManager.Instance.CurrentCurrency);
-        }
-
-        foreach (Transform child in buttonParent)
-        {
-            Destroy(child.gameObject);
-        }
-
-        foreach (var building in accessibleBuildings.Buildings)
-        {
-            if (building.BuildingPrefab == null || building.BuildingData == null)
-            {
-                throw new System.NullReferenceException($"Не заданы: BuildingPrefab или BuildingData для {building.BuildingData?.Name}");
-            }
-
-            GameObject buttonObj = Instantiate(buttonPrefab, buttonParent);
-            Button button = buttonObj.GetComponent<Button>();
-            TextMeshProUGUI text = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
-
-            if (button == null || text == null)
-            {
-                throw new System.NullReferenceException($"Не заданы: Button или TextMeshProUGUI для {building.BuildingData.Name}");
-            }
-
-            string displayName = building.BuildingData.Name;
-            int cost = building.BuildingData.Levels.Count > 0 ? building.BuildingData.Levels[0].Cost : 0;
-            text.text = $"{displayName}\n{building.BuildingData.CostDisplayName}: {cost}";
-
-            int buildingCost = cost;
-            GameObject prefab = building.BuildingPrefab;
-
-            button.onClick.AddListener(() =>
-            {
-                if (CurrencyManager.Instance.CanAfford(buildingCost))
-                {
-                    BuildingManager.Instance.StartBuilding(prefab, buildingCost);
-                }
-                else
-                {
-                    ShowError("Недостаточно валюты");
-                }
-            });
-        }
-
-        if (startWaveButton != null)
-        {
-            startWaveButton.onClick.AddListener(() => WaveManager.Instance.StartNextWave());
-            if (WaveManager.Instance != null)
-            {
-                WaveManager.Instance.OnWaveStarted.AddListener(() => SetWaveButtonActive(false));
-                WaveManager.Instance.OnWaveEnded.AddListener(() => SetWaveButtonActive(true));
-            }
-            SetWaveButtonActive(true);
-        }
-
-        // Инициализация UI поражения
-        if (defeatPanel == null || mainMenuButton == null || restartButton == null)
-        {
-            throw new System.NullReferenceException("Не заданы: defeatPanel, mainMenuButton или restartButton");
-        }
-        defeatPanel.SetActive(false); // Скрываем панель поражения по умолчанию
-        mainMenuButton.onClick.AddListener(GoToMainMenu);
-        restartButton.onClick.AddListener(RestartGame);
-
-        // Подписываемся на событие поражения
-        if (headquarters != null)
-        {
-            headquarters.OnDefeat.AddListener(ShowDefeatUI);
-            Debug.Log("MainUIManager: Подписан на событие OnDefeat штаба");
-        }
-        else
-        {
-            Debug.LogWarning("Штаб (Headquarters) не задан в инспекторе!");
-            headquarters = FindObjectOfType<Headquarters>();
-            if (headquarters != null)
-            {
-                headquarters.OnDefeat.AddListener(ShowDefeatUI);
-                Debug.Log("MainUIManager: Штаб найден через FindObjectOfType");
-            }
-            else
-            {
-                Debug.LogWarning("Штаб (Headquarters) не найден на сцене!");
-            }
-        }
-    }
-    private void Update()
-    {
-        if (headquarters == null)
-        {
-            headquarters = FindObjectOfType<Headquarters>();
-            if (headquarters != null)
-            {
-                headquarters.OnDefeat.AddListener(ShowDefeatUI);
-
-            }
-        }
-    }
-    private void UpdateCurrencyUI(int amount)
-    {
-        if (currencyText == null)
-        {
-            throw new System.NullReferenceException("Не задан: currencyText");
-        }
-        currencyText.text = $"Деньги: {amount}";
+        SceneManager.LoadScene("GameScene");
     }
 
-    public void ShowError(string message)
+    private void ContinueGame()
     {
-        if (errorText == null)
-        {
-            throw new System.NullReferenceException("Не задан: errorText");
-        }
-        errorText.text = message;
-        errorText.gameObject.SetActive(true);
-        Invoke(nameof(HideError), errorDisplayTime);
-    }
-
-    private void HideError()
-    {
-        if (errorText == null)
-        {
-            throw new System.NullReferenceException("Не задан: errorText");
-        }
-        errorText.gameObject.SetActive(false);
-    }
-
-    private void SetWaveButtonActive(bool active)
-    {
-        if (startWaveButton == null)
-        {
-            throw new System.NullReferenceException("Не задан: startWaveButton");
-        }
-        startWaveButton.gameObject.SetActive(active);
-    }
-
-    private void ShowDefeatUI()
-    {
-        Debug.Log("MainUIManager: Показываем UI поражения");
-        defeatPanel.SetActive(true);
-        Time.timeScale = 0f; // Приостанавливаем игру
-    }
-
-    private void GoToMainMenu()
-    {
-        Time.timeScale = 1f; // Возвращаем нормальное время
-        SceneManager.LoadScene(mainMenuSceneName);
-    }
-
-    private void RestartGame()
-    {
-        Time.timeScale = 1f; // Возвращаем нормальное время
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        SceneManager.LoadScene("GameScene");
     }
 }

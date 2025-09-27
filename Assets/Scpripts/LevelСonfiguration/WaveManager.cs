@@ -1,363 +1,338 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using System.Collections;
 
+// Управляет волнами врагов: спавн, отслеживание, завершение.
 public class WaveManager : MonoBehaviour
 {
     public static WaveManager Instance { get; private set; }
+    public int CurrentWaveIndex { get; private set; } // Текущая волна.
 
-    [SerializeField] private WaveData waveData;
-    [SerializeField] private InfiniteWaveData infiniteData;
-    [SerializeField] private float spawnRadius = 2f;
-    [SerializeField] private GameObject spawnIndicatorPrefab;
-    public UnityEvent OnWaveStarted;
-    public UnityEvent OnWaveEnded;
+    [SerializeField] private WaveData waveData; // Данные о волнах.
+    [SerializeField] private InfiniteWaveData infiniteData; // Данные для бесконечного режима.
+    [SerializeField] private float spawnRadius = 2f; // Радиус разброса спавна.
+    [SerializeField] private GameObject spawnIndicatorPrefab; // Префаб индикатора спавна.
+    public UnityEvent OnWaveStarted; // Событие начала волны.
+    public UnityEvent OnWaveEnded; // Событие конца волны.
 
-    private int _currentWaveIndex;
-    private readonly List<EnemyBase> _activeEnemies = new List<EnemyBase>();
-    private bool _isWaveActive;
-    private bool _isInfiniteMode;
-    private GameObject _currentFrontObj;
-    private GameObject _currentSpawnIndicator;
-    private bool _isSpawning; // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ: true, пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
+    private readonly List<EnemyBase> activeEnemies = new List<EnemyBase>(); // Активные враги.
+    private bool isWaveActive; // Идёт ли волна.
+    private bool isSpawning; // Идёт ли спавн врагов.
+    private bool isInfiniteMode; // Бесконечный режим.
+    private GameObject currentFrontObj; // Текущий объект фронта спавна.
+    private GameObject spawnIndicator; // Индикатор точки спавна.
 
-    private void Awake()
+    // Инициализация singleton.
+    void Awake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
+        if (Instance != null)
         {
             Destroy(gameObject);
+            return;
         }
+        Instance = this;
     }
 
-    private void Start()
+    // Создаём индикатор спавна и показываем первую точку следующей волны.
+    void Start()
     {
-        if (spawnIndicatorPrefab == null) return;
-
-        _currentSpawnIndicator = Instantiate(spawnIndicatorPrefab, Vector3.zero, Quaternion.identity);
-        _currentSpawnIndicator.SetActive(false);
-        ShowSpawnIndicator();
+        if (spawnIndicatorPrefab == null)
+        {
+            Debug.LogError("WaveManager: Отсутствует spawnIndicatorPrefab!");
+            return;
+        }
+        spawnIndicator = Instantiate(spawnIndicatorPrefab, Vector3.zero, Quaternion.identity);
+        spawnIndicator.SetActive(false);
+        ShowNextWaveSpawnIndicator(); // Показываем точку спавна для первой волны.
     }
 
+    // Проверяет, закончилась ли волна (нет врагов и спавна).
+    void Update()
+    {
+        if (isWaveActive && !isSpawning && activeEnemies.Count == 0)
+            EndWave();
+    }
+
+    // Запускает следующую волну.
     public void StartNextWave()
     {
-        if (_isWaveActive)
+        if (isWaveActive)
         {
-            Debug.LogWarning("Cannot start wave: already active!");
+            Debug.LogWarning("WaveManager: Волна уже активна!");
             return;
         }
 
-        _isWaveActive = true;
-        _isSpawning = true; // пїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
-        ShowSpawnIndicator();
+        isWaveActive = true;
+        isSpawning = true;
+        OnWaveStarted.Invoke();
 
-        if (_currentWaveIndex < waveData.Waves.Count)
-        {
-            StartCoroutine(SpawnWave(waveData.Waves[_currentWaveIndex]));
-        }
+        if (CurrentWaveIndex < waveData.Waves.Count)
+            StartCoroutine(SpawnWave(waveData.Waves[CurrentWaveIndex]));
         else
         {
-            _isInfiniteMode = true;
-            int infiniteWaveNumber = _currentWaveIndex - waveData.Waves.Count + 1;
-            StartCoroutine(SpawnInfiniteWave(infiniteWaveNumber));
+            isInfiniteMode = true;
+            StartCoroutine(SpawnInfiniteWave(CurrentWaveIndex - waveData.Waves.Count + 1));
         }
-
-        OnWaveStarted.Invoke();
-        Debug.Log($"Wave {_currentWaveIndex + 1} started!");
+        Debug.Log($"Волна {CurrentWaveIndex + 1} началась!");
     }
 
-    private void ShowSpawnIndicator()
+    // Устанавливает индекс волны.
+    public void SetWaveIndex(int index)
     {
-        if (_currentSpawnIndicator == null || waveData == null) return;
+        CurrentWaveIndex = Mathf.Max(0, index);
+        ShowNextWaveSpawnIndicator(); // Обновляем индикатор после установки волны.
+    }
 
-        Vector3 indicatorPos = Vector3.zero;
-        bool showIndicator = false;
-
-        if (_currentWaveIndex < waveData.Waves.Count)
+    // Показывает индикатор для первой точки спавна следующей волны.
+    public void ShowNextWaveSpawnIndicator()
+    {
+        if (spawnIndicator == null || waveData == null)
         {
-            Wave wave = waveData.Waves[_currentWaveIndex];
+            Debug.LogWarning("WaveManager: Отсутствует spawnIndicator или waveData!");
+            return;
+        }
+
+        Vector3 spawnPos = GetNextWaveSpawnPoint();
+        if (spawnPos != Vector3.zero)
+            ShowSpawnIndicator(spawnPos);
+        else
+            HideSpawnIndicator();
+    }
+
+    // Возвращает первую точку спавна для следующей волны.
+    private Vector3 GetNextWaveSpawnPoint()
+    {
+        if (waveData == null || waveData.Waves == null)
+        {
+            Debug.LogWarning("WaveManager: waveData или Waves не настроены!");
+            return Vector3.zero;
+        }
+
+        if (CurrentWaveIndex < waveData.Waves.Count)
+        {
+            var wave = waveData.Waves[CurrentWaveIndex];
             if (!wave.UseCircleSpawn)
             {
-                List<Vector3> spawnPoints = GetSpawnPoints(wave);
-                if (spawnPoints.Count > 0)
-                {
-                    indicatorPos = spawnPoints[Random.Range(0, spawnPoints.Count)];
-                    showIndicator = true;
-                }
+                var spawnPoints = GetSpawnPoints(wave);
+                return spawnPoints.Count > 0 ? spawnPoints[0] : (EnemyManager.Instance != null ? EnemyManager.Instance.GetRandomSpawnPoint().position : Vector3.zero);
             }
+            // Для кругового спавна возвращаем центр или случайную точку на радиусе.
+            return Random.insideUnitCircle.normalized * wave.CircleSpawnRadius;
         }
         else if (infiniteData != null && infiniteData.SpawnType == SpawnType.SequentialFronts && infiniteData.SpawnFrontPrefab != null)
         {
-            GameObject tempFrontObj = Instantiate(infiniteData.SpawnFrontPrefab, Vector3.zero, Quaternion.identity);
-            tempFrontObj.SetActive(false);
-            if (tempFrontObj.TryGetComponent<SpawnPointMap>(out var map))
+            var points = GetSpawnPointsFromFront(infiniteData.SpawnFrontPrefab);
+            if (points.Count > 0)
             {
-                List<Transform> points = map.GetSpawnPoints();
-                if (points.Count > 0)
-                {
-                    int infiniteWaveNumber = _currentWaveIndex - waveData.Waves.Count + 1;
-                    int frontIndex = (infiniteWaveNumber - 1) % points.Count;
-                    indicatorPos = points[frontIndex].position;
-                    showIndicator = true;
-                }
+                int frontIndex = (CurrentWaveIndex - waveData.Waves.Count) % points.Count;
+                return points[frontIndex]?.position ?? transform.position;
             }
-            Destroy(tempFrontObj);
         }
-
-        _currentSpawnIndicator.SetActive(showIndicator);
-        if (showIndicator)
-        {
-            indicatorPos.y += 2f;
-            _currentSpawnIndicator.transform.SetPositionAndRotation(indicatorPos, Quaternion.identity);
-        }
+        return EnemyManager.Instance != null ? EnemyManager.Instance.GetRandomSpawnPoint().position : transform.position;
     }
 
+    // Показывает индикатор спавна в указанной позиции.
+    private void ShowSpawnIndicator(Vector3 spawnPos)
+    {
+        if (spawnIndicator == null) return;
+        spawnIndicator.SetActive(true);
+        spawnIndicator.transform.position = spawnPos + Vector3.up * 2f; // Поднимаем индикатор над землёй.
+    }
+
+    // Скрывает индикатор спавна.
+    private void HideSpawnIndicator()
+    {
+        if (spawnIndicator != null)
+            spawnIndicator.SetActive(false);
+    }
+
+    // Спавнит врагов обычной волны.
     private IEnumerator SpawnWave(Wave wave)
     {
-        HideSpawnIndicator();
+        if (wave.Enemies.Count == 0) yield break;
 
-        List<Vector3> spawnPoints = GetSpawnPoints(wave);
-        foreach (EnemyConfig config in wave.Enemies)
+        var spawnPoints = GetSpawnPoints(wave);
+
+        foreach (var config in wave.Enemies)
         {
-            for (int spawnIndex = 0; spawnIndex < config.Count; spawnIndex++)
+            for (int i = 0; i < config.Count; i++)
             {
                 Vector3 spawnPos = wave.UseCircleSpawn
-                    ? new Vector3(Random.insideUnitCircle.normalized.x * wave.CircleSpawnRadius, 0, Random.insideUnitCircle.normalized.y * wave.CircleSpawnRadius)
+                    ? Random.insideUnitCircle.normalized * wave.CircleSpawnRadius
                     : spawnPoints.Count > 0 ? spawnPoints[Random.Range(0, spawnPoints.Count)] : EnemyManager.Instance.GetRandomSpawnPoint().position;
 
-                spawnPos = AdjustSpawnPosition(spawnPos);
-                SpawnEnemy(config.EnemyPrefab, spawnPos);
+                // Показываем индикатор перед спавном.
+                ShowSpawnIndicator(spawnPos);
 
+                SpawnEnemy(config.EnemyPrefab, AdjustSpawnPosition(spawnPos));
                 float interval = config.UseCurve && config.IntervalCurve != null
-                    ? config.IntervalCurve.Evaluate((float)spawnIndex / config.Count)
+                    ? config.IntervalCurve.Evaluate((float)i / config.Count)
                     : config.Interval;
-
                 yield return new WaitForSeconds(interval);
             }
         }
-
-        _isSpawning = false; // пїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
-        CheckIfWaveEnded(); // пїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
+        isSpawning = false;
+        HideSpawnIndicator(); // Скрываем индикатор после спавна.
     }
 
-    private IEnumerator SpawnInfiniteWave(int infiniteWaveNumber)
+    // Спавнит врагов бесконечной волны.
+    private IEnumerator SpawnInfiniteWave(int waveNumber)
     {
-        HideSpawnIndicator();
+        if (infiniteData?.Enemies == null || infiniteData.Enemies.Count == 0) yield break;
 
-        List<Transform> spawnPoints = GetInfiniteSpawnPoints();
-        foreach (InfiniteWaveData.EnemyTemplate template in infiniteData.Enemies)
+        var spawnPoints = GetInfiniteSpawnPoints();
+
+        foreach (var template in infiniteData.Enemies)
         {
-            if (infiniteWaveNumber < template.StartWave) continue;
+            if (waveNumber < template.StartWave) continue;
 
-            int count = Mathf.RoundToInt(template.BaseCount + template.CountGrowthRate * infiniteWaveNumber);
-            float interval = Mathf.Max(template.BaseInterval * (1 - template.IntervalReductionRate * infiniteWaveNumber), 0.5f);
+            int count = Mathf.RoundToInt(template.BaseCount + template.CountGrowthRate * waveNumber);
+            float interval = Mathf.Max(template.BaseInterval * (1 - template.IntervalReductionRate * waveNumber), 0.5f);
 
-            for (int spawnIndex = 0; spawnIndex < count; spawnIndex++)
+            for (int i = 0; i < count; i++)
             {
-                Vector3 spawnPos = GetInfiniteSpawnPoint(infiniteData, infiniteWaveNumber, spawnPoints);
-                spawnPos = AdjustSpawnPosition(spawnPos);
-                SpawnEnemy(template.EnemyPrefab, spawnPos);
+                Vector3 spawnPos = GetInfiniteSpawnPoint(waveNumber, spawnPoints);
+                ShowSpawnIndicator(spawnPos); // Показываем индикатор перед спавном.
+                SpawnEnemy(template.EnemyPrefab, AdjustSpawnPosition(spawnPos));
                 yield return new WaitForSeconds(interval);
             }
         }
-
-        _isSpawning = false; // пїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
-        CheckIfWaveEnded(); // пїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ CheckIfWaveEnded, пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ infinite)
+        isSpawning = false;
+        HideSpawnIndicator(); // Скрываем индикатор после спавна.
     }
 
+    // Получает точки спавна для обычной волны.
     private List<Vector3> GetSpawnPoints(Wave wave)
     {
-        List<Vector3> spawnPoints = new List<Vector3>();
-
-        if (wave.UseCircleSpawn)
-            return spawnPoints;
+        if (wave.UseCircleSpawn) return new List<Vector3>();
 
         if (wave.UseRandomFronts || wave.SpawnFrontPrefab == null)
-        {
-            AddGlobalSpawnPoints(spawnPoints);
-            return spawnPoints;
-        }
+            return GetGlobalSpawnPoints();
 
-        _currentFrontObj = Instantiate(wave.SpawnFrontPrefab, Vector3.zero, Quaternion.identity);
-        _currentFrontObj.SetActive(false);
-        if (!_currentFrontObj.TryGetComponent<SpawnPointMap>(out var map))
-        {
-            Debug.LogWarning($"No SpawnPointMap in {wave.SpawnFrontPrefab.name}! Using global spawn points.");
-            AddGlobalSpawnPoints(spawnPoints);
-            return spawnPoints;
-        }
+        var points = GetSpawnPointsFromFront(wave.SpawnFrontPrefab);
+        if (points.Count == 0) return GetGlobalSpawnPoints();
 
-        List<Transform> points = map.GetSpawnPoints();
-        if (points.Count == 0)
-        {
-            Debug.LogWarning($"No spawn points in {wave.SpawnFrontPrefab.name}! Using global.");
-            AddGlobalSpawnPoints(spawnPoints);
-            return spawnPoints;
-        }
-
+        var spawnPoints = new List<Vector3>();
         if (wave.SpawnPointIndices != null && wave.SpawnPointIndices.Count > 0)
         {
             foreach (int index in wave.SpawnPointIndices)
             {
                 if (index >= 0 && index < points.Count && points[index] != null)
-                {
                     spawnPoints.Add(points[index].position);
-                }
-                else
-                {
-                    Debug.LogWarning($"Invalid spawn point index {index} for {wave.SpawnFrontPrefab.name}!");
-                }
             }
         }
         else
         {
-            foreach (Transform point in points)
+            foreach (var point in points)
             {
                 if (point != null) spawnPoints.Add(point.position);
             }
         }
-
         return spawnPoints.Count > 0 ? spawnPoints : new List<Vector3> { transform.position };
     }
 
-    private List<Transform> GetInfiniteSpawnPoints()
+    // Получает глобальные точки спавна.
+    private List<Vector3> GetGlobalSpawnPoints()
     {
-        if (infiniteData.SpawnType != SpawnType.SequentialFronts || infiniteData.SpawnFrontPrefab == null)
-            return new List<Transform>();
-
-        _currentFrontObj = Instantiate(infiniteData.SpawnFrontPrefab, Vector3.zero, Quaternion.identity);
-        _currentFrontObj.SetActive(false);
-        return _currentFrontObj.TryGetComponent<SpawnPointMap>(out var map) ? map.GetSpawnPoints() : new List<Transform>();
-    }
-
-    private Vector3 GetInfiniteSpawnPoint(InfiniteWaveData data, int infiniteWaveNumber, List<Transform> spawnPoints)
-    {
-        if (data.SpawnType == SpawnType.Circle)
-        {
-            Vector2 circlePoint = Random.insideUnitCircle.normalized * data.CircleRadius;
-            return new Vector3(circlePoint.x, 0, circlePoint.y);
-        }
-
-        if (spawnPoints == null || spawnPoints.Count == 0 || data.SpawnFrontPrefab == null)
-        {
-            Debug.LogWarning("No valid spawn points for infinite wave! Using WaveManager transform.");
-            return transform.position;
-        }
-
-        int frontIndex = (infiniteWaveNumber - 1) % spawnPoints.Count;
-        return spawnPoints[frontIndex] != null ? spawnPoints[frontIndex].position : transform.position;
-    }
-
-    private Vector3 AdjustSpawnPosition(Vector3 spawnPos)
-    {
-        if (spawnRadius <= 0) return spawnPos;
-
-        Vector2 randomOffset = Random.insideUnitCircle * spawnRadius;
-        spawnPos += new Vector3(randomOffset.x, 0f, randomOffset.y);
-
-        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ NavMesh
-        if (UnityEngine.AI.NavMesh.SamplePosition(spawnPos, out UnityEngine.AI.NavMeshHit hit, spawnRadius, UnityEngine.AI.NavMesh.AllAreas))
-        {
-            spawnPos = hit.position; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ NavMesh
-        }
+        var spawnPoints = new List<Vector3>();
+        var points = EnemyManager.Instance?.SpawnPoints;
+        if (points == null || points.Length == 0)
+            spawnPoints.Add(transform.position);
         else
         {
-            Debug.LogWarning($"Spawn position {spawnPos} is not on NavMesh! Using original position.");
+            foreach (var point in points)
+            {
+                if (point != null) spawnPoints.Add(point.position);
+            }
+        }
+        return spawnPoints;
+    }
+
+    // Получает точки спавна для бесконечной волны.
+    private List<Transform> GetInfiniteSpawnPoints()
+    {
+        if (infiniteData?.SpawnType != SpawnType.SequentialFronts || infiniteData.SpawnFrontPrefab == null)
+            return new List<Transform>();
+        return GetSpawnPointsFromFront(infiniteData.SpawnFrontPrefab);
+    }
+
+    // Создаёт фронт спавна и возвращает его точки.
+    private List<Transform> GetSpawnPointsFromFront(GameObject frontPrefab)
+    {
+        if (currentFrontObj != null) DestroyImmediate(currentFrontObj);
+        currentFrontObj = Instantiate(frontPrefab, Vector3.zero, Quaternion.identity);
+        currentFrontObj.SetActive(false);
+        return currentFrontObj.TryGetComponent<SpawnPointMap>(out var map) ? map.GetSpawnPoints() : new List<Transform>();
+    }
+
+    // Выбирает точку спавна для бесконечной волны.
+    private Vector3 GetInfiniteSpawnPoint(int waveNumber, List<Transform> spawnPoints)
+    {
+        if (infiniteData.SpawnType == SpawnType.Circle)
+            return new Vector3(Random.insideUnitCircle.normalized.x * infiniteData.CircleRadius, 0, Random.insideUnitCircle.normalized.y * infiniteData.CircleRadius);
+
+        return spawnPoints.Count > 0
+            ? spawnPoints[(waveNumber - 1) % spawnPoints.Count]?.position ?? transform.position
+            : transform.position;
+    }
+
+    // Корректирует позицию спавна (добавляет разброс и проверяет NavMesh).
+    private Vector3 AdjustSpawnPosition(Vector3 spawnPos)
+    {
+        if (spawnRadius > 0)
+        {
+            Vector2 offset = Random.insideUnitCircle * spawnRadius;
+            spawnPos += new Vector3(offset.x, 0, offset.y);
         }
 
-        // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
+        if (UnityEngine.AI.NavMesh.SamplePosition(spawnPos, out var hit, spawnRadius, UnityEngine.AI.NavMesh.AllAreas))
+            spawnPos = hit.position;
+
         Plane groundPlane = new Plane(Vector3.up, 0);
-        Ray ray = new Ray(spawnPos + Vector3.up * 100, Vector3.down);
-        if (groundPlane.Raycast(ray, out float distance))
-        {
-            spawnPos = ray.GetPoint(distance);
-        }
+        if (groundPlane.Raycast(new Ray(spawnPos + Vector3.up * 100, Vector3.down), out float distance))
+            spawnPos = new Ray(spawnPos + Vector3.up * 100, Vector3.down).GetPoint(distance);
 
         return spawnPos;
     }
 
+    // Спавнит врага и добавляет его в список активных.
     private void SpawnEnemy(GameObject prefab, Vector3 position)
     {
-        EnemyBase enemy = EnemyManager.Instance.SpawnEnemy(prefab, position);
+        var enemy = EnemyManager.Instance.SpawnEnemy(prefab, position);
         if (enemy != null)
         {
-            _activeEnemies.Add(enemy);
+            activeEnemies.Add(enemy);
             enemy.OnDeactivated.AddListener(EnemyDeactivated);
         }
-        else
-        {
-            Debug.LogWarning($"Failed to spawn enemy {prefab.name}!");
-        }
     }
 
-    private void AddGlobalSpawnPoints(List<Vector3> spawnPoints)
+    // Удаляет врага из списка активных.
+    private void EnemyDeactivated(EnemyBase enemy) => activeEnemies.Remove(enemy);
+
+    // Завершает волну, начисляет награду, сохраняет игру.
+    private void EndWave()
     {
-        if (EnemyManager.Instance.SpawnPoints == null || EnemyManager.Instance.SpawnPoints.Length == 0)
+        isWaveActive = false;
+        OnWaveEnded.Invoke();
+        CurrentWaveIndex++;
+
+        int reward = 0;
+        if (isInfiniteMode)
+            reward = Mathf.RoundToInt(infiniteData.BaseReward + infiniteData.RewardGrowthRate * (CurrentWaveIndex - waveData.Waves.Count));
+        else if (CurrentWaveIndex > 0 && CurrentWaveIndex <= waveData.Waves.Count)
+            reward = waveData.Waves[CurrentWaveIndex - 1].Reward;
+
+        if (reward > 0)
+            CurrencyManager.Instance.AddCurrency(reward);
+
+        if (currentFrontObj != null)
         {
-            Debug.LogWarning("No global spawn points in EnemyManager! Using WaveManager transform.");
-            spawnPoints.Add(transform.position);
+            Destroy(currentFrontObj);
+            currentFrontObj = null;
         }
-        else
-        {
-            foreach (Transform point in EnemyManager.Instance.SpawnPoints)
-            {
-                if (point != null) spawnPoints.Add(point.position);
-            }
-        }
-    }
 
-    private void HideSpawnIndicator()
-    {
-        if (_currentSpawnIndicator != null)
-            _currentSpawnIndicator.SetActive(false);
-    }
-
-    private void EnemyDeactivated(EnemyBase enemy)
-    {
-        _activeEnemies.Remove(enemy);
-        CheckIfWaveEnded(); // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
-    }
-
-    // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
-    private void CheckIfWaveEnded()
-    {
-        if (_activeEnemies.Count == 0 && !_isSpawning && _isWaveActive)
-        {
-            _isWaveActive = false;
-            OnWaveEnded.Invoke();
-            _currentWaveIndex++;
-
-            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ
-            int reward = 0;
-            if (_isInfiniteMode)
-            {
-                int infiniteWaveNumber = _currentWaveIndex - waveData.Waves.Count; // пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ ++
-                reward = Mathf.RoundToInt(infiniteData.BaseReward + infiniteData.RewardGrowthRate * infiniteWaveNumber);
-            }
-            else if (_currentWaveIndex > 0 && _currentWaveIndex <= waveData.Waves.Count)
-            {
-                // пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ: пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ ++)
-                Wave completedWave = waveData.Waves[_currentWaveIndex - 1];
-                reward = completedWave.Reward; // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅ Wave пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ Reward
-            }
-
-            if (reward > 0)
-            {
-                CurrencyManager.Instance.AddCurrency(reward);
-                Debug.Log($"Wave completed! Added {reward} currency. Total: {CurrencyManager.Instance.CurrentCurrency}");
-            }
-
-            if (_currentFrontObj != null)
-            {
-                Destroy(_currentFrontObj);
-                _currentFrontObj = null;
-            }
-            ShowSpawnIndicator();
-        }
+        SaveManager.Instance.SaveGame();
+        ShowNextWaveSpawnIndicator(); // Показываем точку спавна для следующей волны.
     }
 }

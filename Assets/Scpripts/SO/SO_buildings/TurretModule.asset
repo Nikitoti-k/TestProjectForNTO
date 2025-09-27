@@ -22,16 +22,13 @@ MonoBehaviour:
     Range: 5
     ProjectileSpeed: 10
     ProjectilePrefab: {fileID: 7520475760011816767, guid: 31954620633976f478ba75d06f513a16, type: 3}
-    ModelPrefab: {fileID: 296473714273952512, guid: 092446e09160b3e43ae1fc477ab01bf7, type: 3}
   - Damage: 20
     FireRate: 2
     Range: 7
     ProjectileSpeed: 10
     ProjectilePrefab: {fileID: 7520475760011816767, guid: 31954620633976f478ba75d06f513a16, type: 3}
-    ModelPrefab: {fileID: 296473714273952512, guid: 092446e09160b3e43ae1fc477ab01bf7, type: 3}
   - Damage: 30
     FireRate: 3
     Range: 9
-    ProjectileSpeed: 20
+    ProjectileSpeed: 15
     ProjectilePrefab: {fileID: 7520475760011816767, guid: 31954620633976f478ba75d06f513a16, type: 3}
-    ModelPrefab: {fileID: 296473714273952512, guid: 092446e09160b3e43ae1fc477ab01bf7, type: 3}
