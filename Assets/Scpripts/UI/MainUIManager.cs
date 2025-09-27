@@ -21,17 +21,17 @@ public class MainUIManager : MonoBehaviour
         newGameButton.onClick.AddListener(StartNewGame);
         continueButton.onClick.AddListener(ContinueGame);
 
-        // Проверяем наличие сохранения и активируем/деактивируем кнопку "Продолжить".
+        // Проверяем наличие сохранения и активируем/деактивируем кнопку "Продолжить"
         continueButton.interactable = System.IO.File.Exists(savePath);
     }
 
     private void StartNewGame()
     {
-        // Удаляем сохранение, если оно существует.
+        // Удаляем сохранение, если оно есть
         if (System.IO.File.Exists(savePath))
         {
             System.IO.File.Delete(savePath);
-            Debug.Log("MainUIManager: Save deleted for new game.");
+            Debug.Log("MainUIManager: Сохраненние удалено.");
         }
         SceneManager.LoadScene("GameScene");
     }

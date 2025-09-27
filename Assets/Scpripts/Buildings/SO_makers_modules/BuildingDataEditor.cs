@@ -1,4 +1,4 @@
-// Кастомный редактор для BuildingData, отображает поля в инспекторе.
+// Кастомный редактор для BuildingData, отображает поля в инспекторе, ссинхронизирован с модулями
 using UnityEditor;
 using UnityEngine;
 
@@ -16,7 +16,7 @@ public class BuildingDataEditor : Editor
         EditorGUILayout.PropertyField(serializedObject.FindProperty("Levels"), true);
         EditorGUILayout.PropertyField(serializedObject.FindProperty("Modules"), true);
 
-        // Проверяет синхронизацию уровней между BuildingData и модулями
+        // Проверяем синхронизацию уровней между BuildingData и модулями
         if (data.Modules != null)
         {
             for (int i = 0; i < data.Modules.Count; i++)

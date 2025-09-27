@@ -1,4 +1,4 @@
-// Управляет UI улучшения/продажи зданий, отображает параметры и кнопки.
+// Управляет UI улучшения/продажи зданий, отображает параметры и кнопки
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -45,7 +45,7 @@ public class BuildingUpgradeUIManager : MonoBehaviour
     {
         if (currentBuilding == null) return;
 
-        // Закрытие UI при клике вне здания.
+        // Закрытие UI при клике вне здания
         if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -55,7 +55,7 @@ public class BuildingUpgradeUIManager : MonoBehaviour
             }
         }
     }
-
+    // Благодаря модульности в SO можно удобно выводить уникальные прокачиваемые параметры для каждого здания
     public void ShowUI(IBuildingInteractable building)
     {
         if (building == null)

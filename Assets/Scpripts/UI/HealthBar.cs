@@ -5,8 +5,8 @@ using UnityEngine.UI;
 public class HealthBar : MonoBehaviour
 {
     [SerializeField] private Slider healthSlider;
-    [SerializeField] private Vector3 offset = new Vector3(0f, 2f, 0f); // Смещение над объектом.
-    private Object target; // EnemyBase или Turret.
+    [SerializeField] private Vector3 offset = new Vector3(0f, 2f, 0f); 
+    private Object target; 
 
     public void Initialize(Object target, int currentHealth, int maxHealth)
     {

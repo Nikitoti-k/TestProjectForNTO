@@ -1,4 +1,4 @@
-// Хранит данные о постройке: название, параметры уровней и модули.
+// Хранит данные о постройке: название, параметры уровней и модули
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -21,5 +21,5 @@ public class BuildingLevelData
 {
     public int Cost;
     public int MaxHealth;
-    public GameObject Model_view; // Модель для уровня, используется в BuildingBase.
+    public GameObject Model_view; // Можем изменять модель здания в зависимости от уровня
 }

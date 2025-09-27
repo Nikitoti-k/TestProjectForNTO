@@ -6,9 +6,11 @@ public class BridgePool : MonoBehaviour
     public static BridgePool Instance { get; private set; }
 
     [SerializeField] private GameObject bridgePrefab;
-    [SerializeField] private int poolSize = 50; // Начальный размер пула.
+    [SerializeField] private GameSceneConfiguration sceneSettings; // Настройки сцены
+    [SerializeField] private int poolSize = 50;
 
     private List<GameObject> bridgePool = new List<GameObject>();
+    private Vector3 originalScale; // Исходный масштаб префаба для сброса
 
     private void Awake()
     {
@@ -20,6 +22,21 @@ public class BridgePool : MonoBehaviour
         else
         {
             Destroy(gameObject);
+        }
+
+        // Сохраняем исходный масштаб
+        if (bridgePrefab != null)
+        {
+            originalScale = bridgePrefab.transform.localScale;
+        }
+        else
+        {
+            Debug.LogError("BridgePool: bridgePrefab не назначен!");
+        }
+
+        if (sceneSettings == null)
+        {
+            Debug.LogWarning("BridgePool: GameSceneConfiguration не назначен!");
         }
     }
 
@@ -46,13 +63,23 @@ public class BridgePool : MonoBehaviour
             if (bridgePool[i] != null && !bridgePool[i].activeInHierarchy)
             {
                 bridgePool[i].SetActive(true);
+                
+                if (HexGrid.Instance != null && sceneSettings != null)
+                {
+                    bridgePool[i].transform.localScale = originalScale * HexGrid.Instance.CellSize * sceneSettings.BuildingScaleFactor;
+                }
                 return bridgePool[i];
             }
         }
 
-        // Расширяем пул, если все мосты заняты или уничтожены.
+        // Расширяем пул
         var newBridge = Instantiate(bridgePrefab, Vector3.zero, Quaternion.identity);
         newBridge.SetActive(true);
+        
+        if (HexGrid.Instance != null && sceneSettings != null)
+        {
+            newBridge.transform.localScale = originalScale * HexGrid.Instance.CellSize * sceneSettings.BuildingScaleFactor;
+        }
         bridgePool.Add(newBridge);
         return newBridge;
     }
@@ -61,12 +88,14 @@ public class BridgePool : MonoBehaviour
     {
         if (bridge != null)
         {
+            
+            bridge.transform.localScale = originalScale;
             bridge.SetActive(false);
-            bridge.transform.SetParent(null); // Отцепляем от стены для reuse.
+            bridge.transform.SetParent(null); 
         }
     }
 
-    // Очищает и переинициализирует пул при возвращении в главное меню.
+    // Очищает и переинициализирует пул при возвращении в главное меню
     public void ResetPool()
     {
         foreach (var bridge in bridgePool)

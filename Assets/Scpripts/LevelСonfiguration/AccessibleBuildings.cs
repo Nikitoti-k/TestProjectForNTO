@@ -5,7 +5,7 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "AccessibleBuildings", menuName = "Buildings/AccessibleBuildings", order = 2)]
 public class AccessibleBuildings : ScriptableObject
 {
-    public List<BuildingInfo> Buildings = new List<BuildingInfo>(); // Список префабов и их данных.
+    public List<BuildingInfo> Buildings = new List<BuildingInfo>();
 }
 
 [System.Serializable]

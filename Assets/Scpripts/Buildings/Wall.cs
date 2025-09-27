@@ -3,18 +3,18 @@ using UnityEngine;
 public class Wall : BuildingBase
 {
     [SerializeField] private GameObject bridgePrefab;
-    private GameObject[] bridges = new GameObject[6]; // ‘иксированный массив дл€ 6 направлений.
+    private GameObject[] bridges = new GameObject[6]; // массив дл€ возможный перемычек-мостов
 
     public override void Initialize(HexCoord coord)
     {
         base.Initialize(coord);
-        // ќткладываем создание мостов до полной загрузки всех зданий.
+        // ќткладываем создание мостов до полной загрузки всех зданий
     }
 
     public override void Upgrade()
     {
         base.Upgrade();
-        UpdateBridges(); // ќбновл€ем мосты после апгрейда, если это вли€ет на их вид.
+        UpdateBridges(); 
     }
 
     protected override void DestroyBuilding()
@@ -25,7 +25,7 @@ public class Wall : BuildingBase
 
     public void UpdateBridges()
     {
-        // ¬озвращаем текущие мосты в пул.
+      
         for (int i = 0; i < bridges.Length; i++)
         {
             if (bridges[i] != null)
@@ -45,16 +45,21 @@ public class Wall : BuildingBase
             {
                 Vector3 neighborPos = HexGrid.Instance.GetWorldPosFromCoord(neighborCoord);
                 Vector3 dir = (neighborPos - Position).normalized * (HexGrid.Instance.CellSize * 0.5f);
-                // Ѕерем мост из пула.
+              
                 bridges[i] = BridgePool.Instance.GetBridge();
                 if (bridges[i] != null)
                 {
-                    bridges[i].transform.SetPositionAndRotation(Position + dir, Quaternion.LookRotation(dir));
+                    
+                    bridges[i].transform.position = Position + dir;
+                    bridges[i].transform.rotation = Quaternion.LookRotation(dir, Vector3.up);
+                    
+                    Vector3 euler = bridges[i].transform.eulerAngles;
+                    bridges[i].transform.eulerAngles = new Vector3(0f, euler.y, euler.z);
                     bridges[i].transform.SetParent(transform);
-                    foreach (var collider in bridges[i].GetComponentsInChildren<Collider>())
+                  /*  foreach (var collider in bridges[i].GetComponentsInChildren<Collider>())
                     {
-                        collider.enabled = false; // ћосты - визуал, без коллайдеров.
-                    }
+                        collider.enabled = true;
+                    }*/
                 }
             }
         }

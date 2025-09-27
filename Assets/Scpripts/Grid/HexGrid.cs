@@ -1,27 +1,24 @@
+// Управляет гексагональной сеткой: генерация, размещение зданий, визуализация.
 using System.Collections.Generic;
 using UnityEngine;
 
-// Управляет гексагональной сеткой: генерация, размещение зданий, визуализация.
 [ExecuteInEditMode]
 public class HexGrid : MonoBehaviour, IGrid
 {
     public static HexGrid Instance { get; private set; }
-    public float CellSize => cellSize;
+    public float CellSize => sceneSettings != null ? sceneSettings.CellSize : 2f;
     public Dictionary<HexCoord, HexCell> Cells => cells;
 
-    [SerializeField] private int gridRadius = 5; // Радиус сетки.
-    [SerializeField] private float cellSize = 2f; // Размер клетки.
-    [SerializeField] private bool drawGizmos = true; // Показывать гизмо в редакторе.
-    [SerializeField] private bool showGridInGame = true; // Показывать сетку в игре.
-    [SerializeField] private Camera playerCamera; // Камера игрока.
-    [SerializeField] public GameObject headquartersPrefab; // Префаб штаба.
+    [SerializeField] private GameSceneConfiguration sceneSettings;
+    [SerializeField] private bool drawGizmos = true;
+    [SerializeField] private bool showGridInGame = true;
+    [SerializeField] private Camera playerCamera;
 
-    private Dictionary<HexCoord, HexCell> cells = new Dictionary<HexCoord, HexCell>(); // Клетки сетки.
-    private List<GameObject> placedBuildings = new List<GameObject>(); // Размещённые здания.
-    private GameObject linesParent; // Родитель для линий сетки.
-    private Headquarters headquarters; // Ссылка на штаб.
+    private Dictionary<HexCoord, HexCell> cells = new Dictionary<HexCoord, HexCell>();
+    private List<GameObject> placedBuildings = new List<GameObject>();
+    private GameObject linesParent;
+    private Headquarters headquarters;
 
-    // Инициализация singleton.
     void Awake()
     {
         if (Instance != null)
@@ -30,25 +27,20 @@ public class HexGrid : MonoBehaviour, IGrid
             return;
         }
         Instance = this;
-       
     }
 
-    // Генерирует сетку и загружает сохранение.
     void Start()
     {
         if (cells.Count == 0)
             RegenerateGrid();
 
-        // Загружаем сохранение только после генерации сетки.
         if (Application.isPlaying && SaveManager.Instance != null)
             SaveManager.Instance.LoadGame();
 
-        // Размещаем штаб, если он не создан.
-        if (headquarters == null && headquartersPrefab != null && Application.isPlaying)
+        if (headquarters == null && sceneSettings != null && sceneSettings.HeadquartersPrefab != null && Application.isPlaying)
             PlaceHeadquarters();
     }
 
-    // Очищает здания при уничтожении объекта.
     void OnDestroy()
     {
         foreach (var building in placedBuildings)
@@ -60,13 +52,25 @@ public class HexGrid : MonoBehaviour, IGrid
         headquarters = null;
     }
 
-    // Генерирует гексагональную сетку.
-    [ContextMenu("GenerateHexGrid")]
     public void RegenerateGrid()
+    {
+        if (sceneSettings == null)
+        {
+            Debug.LogError("HexGrid: GameSceneConfiguration не назначен!");
+            return;
+        }
+        RegenerateGrid(sceneSettings);
+    }
+
+    public void RegenerateGrid(GameSceneConfiguration settings)
     {
         ClearOldLines();
         cells.Clear();
 
+        int gridRadius = settings.GridRadius;
+        float cellSize = settings.CellSize;
+
+        // Генерация гексагональных координат в пределах радиуса
         for (int q = -gridRadius; q <= gridRadius; q++)
         {
             int r1 = Mathf.Max(-gridRadius, -q - gridRadius);
@@ -74,7 +78,7 @@ public class HexGrid : MonoBehaviour, IGrid
             for (int r = r1; r <= r2; r++)
             {
                 var coord = new HexCoord(q, r);
-                cells.Add(coord, new HexCell(coord, CoordToWorldPos(coord)));
+                cells.Add(coord, new HexCell(coord, CoordToWorldPos(coord, cellSize)));
             }
         }
 
@@ -82,7 +86,6 @@ public class HexGrid : MonoBehaviour, IGrid
             SetupLineRenderers();
     }
 
-    // Очищает старые линии сетки.
     private void ClearOldLines()
     {
         for (int i = transform.childCount - 1; i >= 0; i--)
@@ -90,15 +93,16 @@ public class HexGrid : MonoBehaviour, IGrid
         linesParent = null;
     }
 
-    // Преобразует координаты в мировую позицию.
-    private Vector3 CoordToWorldPos(HexCoord coord)
+    private Vector3 CoordToWorldPos(HexCoord coord, float cellSize)
     {
+        // Гексагональные в мировые координаты
         float x = cellSize * Mathf.Sqrt(3f) * (coord.q + coord.r * 0.5f);
         float z = cellSize * 1.5f * coord.r;
         return new Vector3(x, 0f, z) + transform.position;
     }
 
-    // Находит клетку по мировой позиции.
+    private Vector3 CoordToWorldPos(HexCoord coord) => CoordToWorldPos(coord, CellSize);
+
     public HexCell GetCellFromWorldPos(Vector3 worldPos)
     {
         if (playerCamera == null)
@@ -107,21 +111,21 @@ public class HexGrid : MonoBehaviour, IGrid
             return null;
         }
 
+        // Мировые в гексагональные координаты
         Vector3 localPos = worldPos - transform.position;
-        float q = (Mathf.Sqrt(3f) / 3f * localPos.x - 1f / 3f * localPos.z) / cellSize;
-        float r = (2f / 3f * localPos.z) / cellSize;
+        float q = (Mathf.Sqrt(3f) / 3f * localPos.x - 1f / 3f * localPos.z) / CellSize;
+        float r = (2f / 3f * localPos.z) / CellSize;
         return GetCell(RoundHexCoord(q, r));
     }
 
-    // Возвращает клетку по координатам.
     public HexCell GetCell(HexCoord coord)
     {
         return cells.TryGetValue(coord, out var cell) ? cell : null;
     }
 
-    // Округляет дробные координаты до целых.
     private HexCoord RoundHexCoord(float q, float r)
     {
+        // Округление дробных гексагональных координат с учетом кубической системы (q + r + s = 0)
         float s = -q - r;
         int qInt = Mathf.RoundToInt(q);
         int rInt = Mathf.RoundToInt(r);
@@ -137,10 +141,8 @@ public class HexGrid : MonoBehaviour, IGrid
         return new HexCoord(qInt, rInt);
     }
 
-    // Проверяет, свободна ли клетка.
     public bool IsCellFree(HexCoord coord) => cells.TryGetValue(coord, out var cell) && !cell.IsOccupied;
 
-    // Размещает здание в клетке.
     public void PlaceBuilding(HexCoord coord, BuildingBase building)
     {
         if (!cells.TryGetValue(coord, out var cell) || cell.IsOccupied)
@@ -152,8 +154,13 @@ public class HexGrid : MonoBehaviour, IGrid
         cell.Occupy(building);
         if (building != null)
         {
-            building.transform.position = cell.WorldPosition;
-            building.transform.localScale *= cellSize;
+            float scaleFactor = sceneSettings != null ? sceneSettings.BuildingScaleFactor : 1f;
+            building.transform.localScale *= CellSize * scaleFactor;
+
+            Bounds bounds = CalculateBounds(building.gameObject);
+            float yOffset = -bounds.min.y;
+            building.transform.position = new Vector3(cell.WorldPosition.x, transform.position.y + yOffset, cell.WorldPosition.z);
+
             building.enabled = true;
             building.Initialize(coord);
             placedBuildings.Add(building.gameObject);
@@ -166,7 +173,19 @@ public class HexGrid : MonoBehaviour, IGrid
         }
     }
 
-    // Освобождает клетку.
+    private Bounds CalculateBounds(GameObject obj)
+    {
+        var renderers = obj.GetComponentsInChildren<Renderer>();
+        if (renderers.Length == 0) return new Bounds(obj.transform.position, Vector3.one);
+
+        Bounds bounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+        {
+            bounds.Encapsulate(renderers[i].bounds);
+        }
+        return bounds;
+    }
+
     public void FreeCell(HexCoord coord)
     {
         if (cells.TryGetValue(coord, out var cell))
@@ -176,12 +195,11 @@ public class HexGrid : MonoBehaviour, IGrid
         }
     }
 
-    // Размещает штаб в центре сетки.
     private void PlaceHeadquarters()
     {
-        if (headquarters != null || headquartersPrefab == null)
+        if (headquarters != null || sceneSettings == null || sceneSettings.HeadquartersPrefab == null)
         {
-            Debug.LogWarning("HexGrid: Штаб уже существует или префаб не назначен!");
+            Debug.LogWarning("HexGrid: Штаб уже существует или префаб не назначен в GameSceneConfiguration!");
             return;
         }
 
@@ -192,13 +210,19 @@ public class HexGrid : MonoBehaviour, IGrid
             return;
         }
 
-        var hqObj = Instantiate(headquartersPrefab, CoordToWorldPos(center), Quaternion.identity);
+        var hqObj = Instantiate(sceneSettings.HeadquartersPrefab, CoordToWorldPos(center), Quaternion.identity);
         if (hqObj == null) return;
 
         headquarters = hqObj.GetComponent<Headquarters>();
         if (headquarters != null)
         {
-            headquarters.transform.localScale *= cellSize; // Масштабируем штаб.
+            float scaleFactor = sceneSettings != null ? sceneSettings.BuildingScaleFactor : 1f;
+            headquarters.transform.localScale *= CellSize * scaleFactor;
+
+            Bounds bounds = CalculateBounds(hqObj);
+            float yOffset = -bounds.min.y;
+            headquarters.transform.position = new Vector3(CoordToWorldPos(center).x, transform.position.y + yOffset, CoordToWorldPos(center).z);
+
             headquarters.Initialize(center);
             placedBuildings.Add(hqObj);
             cells[center].Occupy(headquarters);
@@ -210,7 +234,6 @@ public class HexGrid : MonoBehaviour, IGrid
         }
     }
 
-    // Проверяет, свободны ли соседние клетки.
     private bool AreNeighborsFree(HexCoord center)
     {
         foreach (var coord in GetNeighborCoords(center))
@@ -220,10 +243,8 @@ public class HexGrid : MonoBehaviour, IGrid
         return true;
     }
 
-    // Возвращает штаб.
     public Headquarters GetHeadquarters() => headquarters;
 
-    // Возвращает координаты соседних клеток.
     public List<HexCoord> GetNeighborCoords(HexCoord center)
     {
         var directions = new HexCoord[]
@@ -237,13 +258,10 @@ public class HexGrid : MonoBehaviour, IGrid
         return neighbors;
     }
 
-    // Возвращает мировую позицию клетки.
     public Vector3 GetWorldPosFromCoord(HexCoord coord) => cells.TryGetValue(coord, out var cell) ? cell.WorldPosition : Vector3.zero;
 
-    // Возвращает здание в клетке.
     public BuildingBase GetBuildingAt(HexCoord coord) => cells.TryGetValue(coord, out var cell) ? cell.Building : null;
 
-    // Обновляет мосты соседних стен.
     private void UpdateNeighborBridges(HexCoord coord)
     {
         foreach (var nCoord in GetNeighborCoords(coord))
@@ -253,7 +271,6 @@ public class HexGrid : MonoBehaviour, IGrid
         }
     }
 
-    // Создаёт линии сетки для визуализации.
     private void SetupLineRenderers()
     {
         linesParent = new GameObject("GridLines");
@@ -265,25 +282,25 @@ public class HexGrid : MonoBehaviour, IGrid
             var lineObj = new GameObject($"HexLine_{cell.Coord.q}_{cell.Coord.r}");
             lineObj.transform.SetParent(linesParent.transform);
             var lr = lineObj.AddComponent<LineRenderer>();
-            lr.material = new Material(Shader.Find("Sprites/Default"));
+            lr.material = sceneSettings.GridLineMaterial != null ? sceneSettings.GridLineMaterial : new Material(Shader.Find("Sprites/Default")); // берём обычный юнитевский, если не задали в SO
             lr.startColor = lr.endColor = Color.white;
             lr.startWidth = lr.endWidth = 0.05f;
             lr.useWorldSpace = true;
             lr.loop = true;
 
+            // Создание шестиугольника для визуализации клетки в игре
             Vector3[] positions = new Vector3[6];
             for (int i = 0; i < 6; i++)
             {
                 float angleDeg = 60f * i - 30f;
                 float angleRad = Mathf.Deg2Rad * angleDeg;
-                positions[i] = cell.WorldPosition + new Vector3(cellSize * Mathf.Cos(angleRad), 0f, cellSize * Mathf.Sin(angleRad));
+                positions[i] = cell.WorldPosition + new Vector3(CellSize * Mathf.Cos(angleRad), 0f, CellSize * Mathf.Sin(angleRad));
             }
             lr.positionCount = 6;
             lr.SetPositions(positions);
         }
     }
 
-    // Рисует гизмо сетки в редакторе.
     private void OnDrawGizmos()
     {
         if (!drawGizmos || cells.Count == 0) return;
@@ -291,12 +308,13 @@ public class HexGrid : MonoBehaviour, IGrid
         Gizmos.color = Color.white;
         foreach (var cell in cells.Values)
         {
+            // Отрисовка шестиугольника для гизмо в редакторе
             Vector3[] corners = new Vector3[6];
             for (int i = 0; i < 6; i++)
             {
                 float angleDeg = 60f * i - 30f;
                 float angleRad = Mathf.Deg2Rad * angleDeg;
-                corners[i] = cell.WorldPosition + new Vector3(cellSize * Mathf.Cos(angleRad), 0f, cellSize * Mathf.Sin(angleRad));
+                corners[i] = cell.WorldPosition + new Vector3(CellSize * Mathf.Cos(angleRad), 0f, CellSize * Mathf.Sin(angleRad));
             }
             for (int i = 0; i < 6; i++)
                 Gizmos.DrawLine(corners[i], corners[(i + 1) % 6]);

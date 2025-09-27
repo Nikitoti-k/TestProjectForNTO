@@ -16,44 +16,10 @@ MonoBehaviour:
   - Enemies:
     - EnemyPrefab: {fileID: 6075044335832665027, guid: 5f2534d42d510cf408f1a27f0095916d, type: 3}
       Count: 10
-      Interval: 1
-      IntervalCurve:
-        serializedVersion: 2
-        m_Curve:
-        - serializedVersion: 3
-          time: 0
-          value: 1
-          inSlope: -1.8207107
-          outSlope: -1.8207107
-          tangentMode: 34
-          weightedMode: 0
-          inWeight: 0
-          outWeight: 0.33333334
-        - serializedVersion: 3
-          time: 0.50973463
-          value: 0.07192075
-          inSlope: 0.036151707
-          outSlope: 0.036151707
-          tangentMode: 34
-          weightedMode: 0
-          inWeight: 0.33333334
-          outWeight: 0.33333334
-        - serializedVersion: 3
-          time: 1
-          value: 1
-          inSlope: 1.8930141
-          outSlope: 1.8930141
-          tangentMode: 34
-          weightedMode: 0
-          inWeight: 0.33333334
-          outWeight: 0
-        m_PreInfinity: 2
-        m_PostInfinity: 2
-        m_RotationOrder: 4
-      UseCurve: 0
+      Interval: 0.2
     SpawnFrontPrefab: {fileID: 7120400873932644193, guid: 44e8761579c5ea94194c5ccadcb24c8f, type: 3}
     SpawnPointIndices: 00000000
     UseRandomFronts: 0
     UseCircleSpawn: 0
     CircleSpawnRadius: 10
-    Reward: 1000
+    Reward: 0

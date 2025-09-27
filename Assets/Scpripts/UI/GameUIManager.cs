@@ -1,4 +1,4 @@
-// ”правл€ет основным UI: кнопки строительства, валюта, ошибки, волны, поражение.
+// ”правл€ет основным UI: кнопки строительства, валюта, ошибки, волны, поражение (всЄ кроме UI улучшени€ зданий - решил разделиить отвественность)
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -19,11 +19,10 @@ public class GameUIManager : MonoBehaviour
     [SerializeField] private Button mainMenuButton;
     [SerializeField] private Button restartButton;
     [SerializeField] private string mainMenuSceneName = "MainMenu";
-    [SerializeField] private Headquarters headquarters;
     [SerializeField] private Button exitToMenuButton;
+    private Headquarters headquarters;
 
-    
-    
+
 
     private void ExitToMenu()
     {
@@ -31,12 +30,7 @@ public class GameUIManager : MonoBehaviour
     }
     private void Awake()
     {
-        if (exitToMenuButton == null)
-        {
-            Debug.LogError("GameUIManager: Missing exitToMenuButton reference!");
-            return;
-        }
-
+       
         exitToMenuButton.onClick.AddListener(ExitToMenu);
         if (Instance != null)
         {
@@ -54,6 +48,7 @@ public class GameUIManager : MonoBehaviour
             return;
         }
 
+
         CurrencyManager.Instance?.OnCurrencyChanged.AddListener(UpdateCurrencyUI);
         UpdateCurrencyUI(CurrencyManager.Instance?.CurrentCurrency ?? 0);
 
@@ -63,12 +58,7 @@ public class GameUIManager : MonoBehaviour
         }
         foreach (var building in accessibleBuildings.Buildings)
         {
-            if (building.BuildingPrefab == null || building.BuildingData == null)
-            {
-                Debug.LogError($"GameUIManager: Invalid BuildingInfo for {building.BuildingData?.Name}");
-                continue;
-            }
-
+          
             var buttonObj = Instantiate(buttonPrefab, buttonParent);
             var button = buttonObj.GetComponent<Button>();
             var text = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
@@ -102,7 +92,7 @@ public class GameUIManager : MonoBehaviour
 
         if (defeatPanel == null || mainMenuButton == null || restartButton == null)
         {
-            Debug.LogError("GameUIManager: Missing defeat UI components!");
+            Debug.LogError("GameUIManager: не найден UI поражени€");
             return;
         }
         defeatPanel.SetActive(false);
@@ -115,7 +105,7 @@ public class GameUIManager : MonoBehaviour
         }
         else
         {
-            headquarters = FindObjectOfType<Headquarters>();
+            headquarters = FindFirstObjectByType<Headquarters>();
             if (headquarters != null) headquarters.OnDefeat.AddListener(ShowDefeatUI);
         }
     }
@@ -124,7 +114,7 @@ public class GameUIManager : MonoBehaviour
     {
         if (headquarters == null)
         {
-            headquarters = FindObjectOfType<Headquarters>();
+            headquarters = FindFirstObjectByType<Headquarters>();
             if (headquarters != null) headquarters.OnDefeat.AddListener(ShowDefeatUI);
         }
     }

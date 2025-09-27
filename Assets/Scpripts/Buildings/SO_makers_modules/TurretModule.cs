@@ -1,4 +1,4 @@
-// Модуль турели, хранит параметры урона, скорострельности, дальности, скорости снаряда.
+// Модуль турели, хранит параметры урона, скорострельности, дальности, скорости снаряда
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -59,5 +59,5 @@ public class TurretLevelData
     public float FireRate;
     public float Range;
     public float ProjectileSpeed = 10f;
-    public GameObject ProjectilePrefab; // Для снарядов, не модели.
+    public GameObject ProjectilePrefab; 
 }

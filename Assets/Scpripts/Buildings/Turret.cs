@@ -1,16 +1,19 @@
-// Турель: атакует врагов в радиусе, использует пул снарядов. Наслед от BuildingBase.
 using UnityEngine;
 using System.Collections.Generic;
-
+// Бащня турели - стреляет по ближайшим врагам, проджектайлы берёт из пула
 public class Turret : BuildingBase
 {
-    [SerializeField] private LayerMask enemyLayer;
     private float nextFireTime;
     private EnemyBase currentTarget;
 
     public override void Initialize(HexCoord coord)
     {
         base.Initialize(coord);
+        if (sceneSettings == null)
+        {
+            Debug.LogError($"{name}: GameSceneConfiguration не назначен!");
+            return;
+        }
         UpdateHealthBar();
     }
 
@@ -28,7 +31,7 @@ public class Turret : BuildingBase
 
     private void Update()
     {
-        if (!IsPlaced) return;
+        if (!IsPlaced || sceneSettings == null) return;
 
         var turretModule = GetModule<TurretModule>();
         if (turretModule == null || Time.time < nextFireTime) return;
@@ -47,7 +50,7 @@ public class Turret : BuildingBase
     private void FindTarget(float range)
     {
         currentTarget = null;
-        Collider[] hits = Physics.OverlapSphere(transform.position, range, enemyLayer);
+        Collider[] hits = Physics.OverlapSphere(transform.position, range, sceneSettings.EnemyLayer);
         float minDistance = float.MaxValue;
 
         foreach (var hit in hits)

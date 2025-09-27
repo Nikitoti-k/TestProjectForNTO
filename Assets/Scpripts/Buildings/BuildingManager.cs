@@ -6,15 +6,15 @@ public class BuildingManager : MonoBehaviour
     public static BuildingManager Instance { get; private set; }
     public bool IsBuildingMode => isBuildingMode;
 
-    [SerializeField] private HexGrid hexGrid; // Сетка для размещения зданий.
-    [SerializeField] private Material previewValidMaterial; // Материал для валидного превью.
-    [SerializeField] private Material previewInvalidMaterial; // Материал для невалидного.
+    [SerializeField] private HexGrid hexGrid; 
+    [SerializeField] private GameSceneConfiguration sceneSettings; 
 
     private GameObject currentPreview; // Текущее превью здания.
     private Renderer[] previewRenderers; // Кэш рендеров превью.
-    private bool isBuildingMode; // Активен ли режим строительства.
-    private GameObject buildingPrefab; // Префаб текущего здания.
-    private int currentBuildingCost; // Стоимость текущего здания.
+    private Bounds cachedPreviewBounds; // Кэш bounding box превью.
+    private bool isBuildingMode;
+    private GameObject buildingPrefab; 
+    private int currentBuildingCost;
 
     // Инициализация singleton.
     void Awake()
@@ -30,13 +30,14 @@ public class BuildingManager : MonoBehaviour
     // Запускает режим строительства с указанным префабом и стоимостью.
     public void StartBuilding(GameObject prefab, int cost)
     {
-        if (prefab == null || hexGrid == null || previewValidMaterial == null || previewInvalidMaterial == null)
+        if (prefab == null || hexGrid == null || sceneSettings == null ||
+            sceneSettings.PreviewValidMaterial == null || sceneSettings.PreviewInvalidMaterial == null)
         {
-            Debug.LogError("BuildingManager: Отсутствуют необходимые компоненты!");
+            Debug.LogError("BuildingManager: отсутствуют компоненты!");
             return;
         }
 
-        EndBuildingMode(); // Очищаем предыдущее превью, если есть.
+        EndBuildingMode(); 
 
         buildingPrefab = prefab;
         currentBuildingCost = cost;
@@ -45,7 +46,7 @@ public class BuildingManager : MonoBehaviour
         currentPreview = Instantiate(buildingPrefab, Vector3.zero, Quaternion.identity);
         currentPreview.SetActive(false);
 
-        // Отключаем физику и скрипты для превью.
+        // Отключаем скрипты для превью
         if (currentPreview.TryGetComponent<BuildingBase>(out var buildingBase))
             buildingBase.enabled = false;
 
@@ -53,10 +54,15 @@ public class BuildingManager : MonoBehaviour
             collider.enabled = false;
 
         previewRenderers = currentPreview.GetComponentsInChildren<Renderer>();
-        SetPreviewMaterial(previewValidMaterial);
+        SetPreviewMaterial(sceneSettings.PreviewValidMaterial);
+
+        // Применяем масштабирование и кэшируем bounding box.
+        float scaleFactor = sceneSettings != null ? sceneSettings.BuildingScaleFactor : 1f;
+        currentPreview.transform.localScale *= hexGrid.CellSize * scaleFactor;
+        cachedPreviewBounds = CalculateBounds(currentPreview);
     }
 
-    // Обновляет положение превью и обрабатывает клики.
+   
     void Update()
     {
         if (!isBuildingMode || currentPreview == null) return;
@@ -69,15 +75,17 @@ public class BuildingManager : MonoBehaviour
             var cell = hexGrid.GetCellFromWorldPos(hitPoint);
             if (cell != null)
             {
-                currentPreview.transform.position = cell.WorldPosition;
-                currentPreview.transform.localScale = Vector3.one * hexGrid.CellSize * 0.8f;
+                // Используем bounding box для выравнивания по плоскости
+                float yOffset = -cachedPreviewBounds.min.y;
+                currentPreview.transform.position = new Vector3(cell.WorldPosition.x, hexGrid.transform.position.y + yOffset, cell.WorldPosition.z);
+
                 currentPreview.SetActive(true);
 
-                // Проверяем валидность клетки и обновляем материал.
+                // Проверяем валидность клетки
                 bool isValid = hexGrid.IsCellFree(cell.Coord);
-                SetPreviewMaterial(isValid ? previewValidMaterial : previewInvalidMaterial);
+                SetPreviewMaterial(isValid ? sceneSettings.PreviewValidMaterial : sceneSettings.PreviewInvalidMaterial);
 
-                // ЛКМ: строим, если клетка свободна и хватает валюты.
+                
                 if (Input.GetMouseButtonDown(0) && isValid && CurrencyManager.Instance.CanAfford(currentBuildingCost))
                 {
                     var buildingObj = Instantiate(buildingPrefab, cell.WorldPosition, Quaternion.identity);
@@ -91,21 +99,35 @@ public class BuildingManager : MonoBehaviour
             }
             else
             {
-                currentPreview.SetActive(false); // Скрываем превью вне сетки.
+                currentPreview.SetActive(false); 
             }
         }
 
-        if (Input.GetMouseButtonDown(1)) EndBuildingMode(); // ПКМ: отмена.
+        if (Input.GetKeyDown(KeyCode.Escape)) EndBuildingMode(); 
     }
 
-    // Устанавливает материал для превью.
+   
     private void SetPreviewMaterial(Material mat)
     {
         foreach (var renderer in previewRenderers)
             renderer.material = mat;
     }
 
-    // Завершает режим строительства.
+    // Вычисляет объединённый bounding box для объекта и его дочерних элементов
+    private Bounds CalculateBounds(GameObject obj)
+    {
+        var renderers = obj.GetComponentsInChildren<Renderer>();
+        if (renderers.Length == 0) return new Bounds(obj.transform.position, Vector3.one);
+
+        Bounds bounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+        {
+            bounds.Encapsulate(renderers[i].bounds);
+        }
+        return bounds;
+    }
+
+    
     private void EndBuildingMode()
     {
         isBuildingMode = false;
@@ -115,6 +137,7 @@ public class BuildingManager : MonoBehaviour
             currentPreview = null;
         }
         previewRenderers = null;
+        cachedPreviewBounds = default; 
         currentBuildingCost = 0;
     }
 }

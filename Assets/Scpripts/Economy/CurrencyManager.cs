@@ -5,7 +5,7 @@ public class CurrencyManager : MonoBehaviour
 {
     public static CurrencyManager Instance { get; private set; }
 
-    [SerializeField] private int startingCurrency = 1000;
+    [SerializeField] private GameSceneConfiguration sceneSettings;
     public int CurrentCurrency { get; private set; }
     public UnityEvent<int> OnCurrencyChanged;
 
@@ -23,7 +23,14 @@ public class CurrencyManager : MonoBehaviour
 
     private void Start()
     {
-        CurrentCurrency = startingCurrency;
+        if (sceneSettings == null)
+        {
+            Debug.LogWarning("CurrencyManager: GameSceneConfiguration не назначен!");
+        }
+        else
+        {
+            CurrentCurrency = sceneSettings.StartingCurrency;
+        }
         OnCurrencyChanged.Invoke(CurrentCurrency);
     }
 
@@ -43,7 +50,7 @@ public class CurrencyManager : MonoBehaviour
         OnCurrencyChanged.Invoke(CurrentCurrency);
     }
 
-    public void SetCurrency(int amount) // Новый: для загрузки.
+    public void SetCurrency(int amount)
     {
         if (amount < 0) return;
         CurrentCurrency = amount;

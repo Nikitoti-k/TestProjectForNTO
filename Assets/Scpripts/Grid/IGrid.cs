@@ -1,4 +1,4 @@
-// Интерфейс для grid management - абстракция, чтоб mock или swap impl если нужно (SOLID: interface segregation).
+// Интерфейс для grid management
 using UnityEngine;
 
 public interface IGrid

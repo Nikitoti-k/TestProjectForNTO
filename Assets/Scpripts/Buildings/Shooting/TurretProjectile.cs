@@ -1,4 +1,4 @@
-// Projectile для turret: fly to target, damage on hit/time out, deactivate to pool.
+// Летит к цели, находится в пуле
 using UnityEngine;
 
 public class TurretProjectile : MonoBehaviour
@@ -8,12 +8,12 @@ public class TurretProjectile : MonoBehaviour
     private Vector3 direction;
     private float damage;
     private float speed;
-    private const float MaxLifetime = 0.5f; // Fix: коммент был 3s, но const 0.5 - assume 3.
+    private const float MaxLifetime = 0.5f; //решил не выносить, так как параметр на баланс не влияет
 
     private float spawnTime;
     private bool isTargetLost;
 
-    // Init: set target/damage/speed, activate.
+   
     public void Initialize(EnemyBase targetEnemy, float dmg, float spd)
     {
         target = targetEnemy;
@@ -60,12 +60,12 @@ public class TurretProjectile : MonoBehaviour
         else
         {
             if (!isTargetLost) isTargetLost = true;
-            transform.position += direction * speed * Time.deltaTime; // Fly straight if lost.
+            transform.position += direction * speed * Time.deltaTime;
         }
 
         if (direction != Vector3.zero)
         {
-            transform.rotation = Quaternion.LookRotation(direction); // Face dir.
+            transform.rotation = Quaternion.LookRotation(direction); 
         }
     }
 

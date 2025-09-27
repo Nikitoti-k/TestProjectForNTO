@@ -126,9 +126,7 @@ MonoBehaviour:
   OnDeactivated:
     m_PersistentCalls:
       m_Calls: []
-  buildingLayer:
-    serializedVersion: 2
-    m_Bits: 64
+  sceneSettings: {fileID: 11400000, guid: ac9a18866639eb440bc1786aa82cd067, type: 2}
 --- !u!195 &6841361005972631465
 NavMeshAgent:
   m_ObjectHideFlags: 0

@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 6662141110726425079}
   - component: {fileID: 7444422452216050331}
   m_Layer: 6
-  m_Name: Headquarters_model
+  m_Name: Headquarters_view
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

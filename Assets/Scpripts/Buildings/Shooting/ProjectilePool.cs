@@ -1,4 +1,4 @@
-// Pool для projectiles: singleton, pre-inst + expand on demand.
+// Расширяемый пул для проджектайлов - синглтон
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -44,7 +44,6 @@ public class ProjectilePool : MonoBehaviour
         {
             if (!projectile.gameObject.activeInHierarchy) return projectile;
         }
-        // Expand: inst new if all busy.
         var newProjectile = Instantiate(projectilePrefab, Vector3.zero, Quaternion.identity);
         newProjectile.gameObject.SetActive(false);
         projectilePool.Add(newProjectile);

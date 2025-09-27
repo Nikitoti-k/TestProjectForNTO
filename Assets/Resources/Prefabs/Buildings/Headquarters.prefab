@@ -478,7 +478,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   data: {fileID: 11400000, guid: c215aa6860c08f74491fcaa7b98efcc0, type: 2}
   modelSlot: {fileID: 0}
-  sellPriceMultiplier: 0.8
+  sceneSettings: {fileID: 11400000, guid: ac9a18866639eb440bc1786aa82cd067, type: 2}
   OnBuildingDestroyed:
     m_PersistentCalls:
       m_Calls: []

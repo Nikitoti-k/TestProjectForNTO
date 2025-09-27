@@ -1,4 +1,5 @@
-// Структ для координат в hex-гриде. Использует axial coords (q, r), s - вычисляемый для кубической системы. Поддерживает расстояние, сравнения, сложение.
+// Структура для координат в hex-гриде. Использует axial coords (q, r), s - вычисляемый для кубической системы. Поддерживает расстояние, сравнения, сложение
+// Решил делать свой, а не работать с юнитевским
 using UnityEngine;
 
 [System.Serializable]
@@ -13,16 +14,16 @@ public struct HexCoord
         this.r = r;
     }
 
-    public int s => -q - r; // s всегда -q-r, для куб coords - упрощает расчёты дистанции.
+    public int s => -q - r; // координату s можно найти из  -q - r
 
     public int DistanceTo(HexCoord other)
     {
-        return (Mathf.Abs(q - other.q) + Mathf.Abs(r - other.r) + Mathf.Abs(s - other.s)) / 2; // Стандартная формула dist в hex, макс разница по осям /2.
+        return (Mathf.Abs(q - other.q) + Mathf.Abs(r - other.r) + Mathf.Abs(s - other.s)) / 2; // Стандартная формула dist в hex, макс разница по осям /2
     }
 
     public override int GetHashCode()
     {
-        return q.GetHashCode() ^ r.GetHashCode(); // XOR для хэша, чтоб уникальность по q+r.
+        return q.GetHashCode() ^ r.GetHashCode(); // XOR для хэша, чтоб уникальность по q+r
     }
 
     public override bool Equals(object obj)

@@ -6,7 +6,7 @@ public abstract class BuildingBase : MonoBehaviour, IBuildingInteractable
 {
     [SerializeField] protected BuildingData data;
     [SerializeField] private Transform modelSlot;
-    [SerializeField] private float sellPriceMultiplier = 0.8f;
+    [SerializeField] protected GameSceneConfiguration sceneSettings;
     private GameObject currentModel;
     public int CurrentLevel => currentLevel;
     public UnityEvent OnBuildingDestroyed = new UnityEvent();
@@ -20,6 +20,7 @@ public abstract class BuildingBase : MonoBehaviour, IBuildingInteractable
     public virtual void Initialize(HexCoord coord)
     {
         if (data == null) throw new System.NullReferenceException("BuildingData null - assign in prefab.");
+        if (sceneSettings == null) Debug.LogWarning($"{name}: GameSceneConfiguration не назначен!");
 
         GridPosition = coord;
         IsPlaced = true;
@@ -50,7 +51,7 @@ public abstract class BuildingBase : MonoBehaviour, IBuildingInteractable
         }
     }
 
-    public virtual void UpgradeToLevel(int level) // Изменено: public для сохранения.
+    public virtual void UpgradeToLevel(int level)
     {
         currentLevel = level;
         if (data.Levels.Count > level)
@@ -98,12 +99,13 @@ public abstract class BuildingBase : MonoBehaviour, IBuildingInteractable
     {
         if (data == null) return 0;
 
+        float multiplier = sceneSettings != null ? sceneSettings.SellPriceMultiplier : 0.8f;
         int totalCost = 0;
         for (int i = 0; i <= currentLevel && i < data.Levels.Count; i++)
         {
             totalCost += data.Levels[i].Cost;
         }
-        return Mathf.FloorToInt(totalCost * sellPriceMultiplier);
+        return Mathf.FloorToInt(totalCost * multiplier);
     }
 
     public virtual bool CanUpgrade()

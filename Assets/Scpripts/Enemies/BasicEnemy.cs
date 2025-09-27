@@ -1,5 +1,4 @@
-﻿// Базовый враг: движется к HQ или ближайшему зданию по NavMesh, атакует в радиусе.
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
 
@@ -9,55 +8,42 @@ public class BasicEnemy : EnemyBase
     private NavMeshAgent agent;
     private Vector3 hqPosition;
     private BuildingBase currentTarget;
-    [SerializeField] private LayerMask buildingLayer;
 
     public override void Initialize()
     {
         base.Initialize();
+        if (sceneSettings == null) return; 
+
         agent = GetComponent<NavMeshAgent>();
         if (agent == null)
         {
-            Debug.LogWarning($"{name}: No NavMeshAgent!");
+            Debug.LogWarning($"{name}: нет NavMeshAgent!");
             return;
         }
         agent.speed = data?.Speed ?? 3f;
         agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
 
-        var hexGrid = FindObjectOfType<HexGrid>();
+        var hexGrid = FindFirstObjectByType<HexGrid>();
         if (hexGrid?.GetHeadquarters() != null)
         {
             hqPosition = hexGrid.GetHeadquarters().Position;
         }
         else
         {
-            Debug.LogWarning($"{name}: HQ not found!");
+            Debug.LogWarning($"{name}: цель не нашли!");
         }
     }
 
     private void OnEnable()
-    {
-        if (agent != null && agent.isOnNavMesh)
-        {
+    {     
             StartCoroutine(WaitAndMove());
-        }
-        else
-        {
-            Debug.LogWarning($"{name}: Can't start move in OnEnable: no agent or not on NavMesh");
-        }
     }
 
     private IEnumerator WaitAndMove()
     {
         yield return null;
-        if (agent != null && agent.isOnNavMesh)
-        {
             Move();
-            Debug.Log($"{name}: Move started");
-        }
-        else
-        {
-            Debug.LogWarning($"{name}: Agent not on NavMesh after delay!");
-        }
+            Debug.Log($"{name}: начал двигаться");
     }
 
     private void Update()
@@ -116,16 +102,16 @@ public class BasicEnemy : EnemyBase
     {
         if (data == null || target == null) return;
         int effectiveDamage = data.Damage;
-       
+
         target.TakeDamage(effectiveDamage);
-        Debug.Log($"Enemy attacks {target.name} for {effectiveDamage} damage");
+        Debug.Log($"Враг атакует здание: {target.name}, нанося {effectiveDamage} урона");
     }
 
     private void CheckForBuildings()
     {
-        if (data == null) return;
+        if (data == null || sceneSettings == null) return;
 
-        Collider[] hits = Physics.OverlapSphere(transform.position, GetDetectionRange(), buildingLayer);
+        Collider[] hits = Physics.OverlapSphere(transform.position, GetDetectionRange(), sceneSettings.BuildingLayer);
         BuildingBase closest = null;
         float minDist = float.MaxValue;
         Vector3 dirToHQ = (hqPosition - transform.position).normalized;
@@ -167,11 +153,10 @@ public class BasicEnemy : EnemyBase
         if (currentTarget != null)
         {
             currentTarget.OnBuildingDestroyed.AddListener(ResetTarget);
-            Debug.Log($"{name}: New target: {currentTarget.name}");
+            Debug.Log($"{name}: Новая ццель: {currentTarget.name}");
         }
     }
-
-    // Исправлено: проверка agent перед isStopped.
+     
     private void ResetTarget()
     {
         if (currentTarget != null)
@@ -196,7 +181,7 @@ public class BasicEnemy : EnemyBase
         }
         if (agent != null && agent.isOnNavMesh)
         {
-            agent.isStopped = true; // Останавливаем перед деактивацией.
+            agent.isStopped = true; 
         }
         base.Deactivate();
     }

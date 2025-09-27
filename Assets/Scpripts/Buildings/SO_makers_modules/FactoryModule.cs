@@ -10,5 +10,5 @@ public class FactoryModule : BuildingModule
 [System.Serializable]
 public class FactoryLevelData
 {
-    public int MoneyPerWave; // Деньги после волны
+    public int MoneyPerWave; 
 }

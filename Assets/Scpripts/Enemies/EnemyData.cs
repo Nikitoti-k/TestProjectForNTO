@@ -1,4 +1,4 @@
-// SO для врагов: хранит параметры HP, speed, damage, attack rate/range, detection.
+// SO для врагов: хранит параметры HP, speed, damage, attack rate/range, detection, reward per kill
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "EnemyData", menuName = "Enemies/EnemyData", order = 3)]
@@ -10,5 +10,5 @@ public class EnemyData : ScriptableObject
     public float AttackRate = 1f;
     public float AttackRange = 1f;
     public float DetectionRange = 5f;
-    public int Reward = 10; // Новый: валюта за kill.
+    public int Reward = 10; 
 }

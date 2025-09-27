@@ -1,7 +1,6 @@
-// Хранит данные о волнах: враги, спавн, награда.
 using System.Collections.Generic;
 using UnityEngine;
-
+// SO под задаваемые волны. Да, в ТЗ написано только про бесконечный режим, но решил добавить для гибкости общей системы. Можешь задавать и балансить вручную первые волны, а потом подрубать бесконечнй режим.
 [CreateAssetMenu(fileName = "WaveData", menuName = "Waves/WaveData", order = 1)]
 public class WaveData : ScriptableObject
 {
@@ -26,20 +25,18 @@ public class WaveData : ScriptableObject
 public class Wave
 {
     public List<EnemyConfig> Enemies = new List<EnemyConfig>();
-    public GameObject SpawnFrontPrefab; // Prefab с SpawnPointMap.
-    public List<int> SpawnPointIndices; // Индексы точек спавна.
-    public bool UseRandomFronts; // Рандом из глобальных точек.
-    public bool UseCircleSpawn; // Спавн на круге.
-    public float CircleSpawnRadius; // Радиус круга.
-    public int Reward; // Награда за волну.
+    public GameObject SpawnFrontPrefab;
+    public List<int> SpawnPointIndices;
+    public bool UseRandomFronts;
+    public bool UseCircleSpawn; 
+    public float CircleSpawnRadius;
+    public int Reward;
 }
 
 [System.Serializable]
 public class EnemyConfig
 {
-    public GameObject EnemyPrefab; // Prefab врага.
-    public int Count; // Кол-во врагов.
-    public float Interval; // Интервал спавна.
-    public AnimationCurve IntervalCurve; // Кривую интервала.
-    public bool UseCurve; // Использовать кривую.
+    public GameObject EnemyPrefab; 
+    public int Count; 
+    public float Interval;
 }

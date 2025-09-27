@@ -1,13 +1,15 @@
-// Базовый класс для врагов: хэндлит HP, damage, движение, атаку. Абстрактный для Move/Attack.
 using UnityEngine;
 using UnityEngine.Events;
 
 public abstract class EnemyBase : MonoBehaviour
 {
     [SerializeField] protected EnemyData data;
+    [SerializeField] protected GameSceneConfiguration sceneSettings; 
     protected int currentHealth;
     protected float nextAttackTime;
     public UnityEvent<EnemyBase> OnDeactivated = new UnityEvent<EnemyBase>();
+
+    public LayerMask EnemyLayer => sceneSettings != null ? sceneSettings.EnemyLayer : 0;
 
     public virtual void Initialize()
     {
@@ -16,14 +18,19 @@ public abstract class EnemyBase : MonoBehaviour
             Debug.LogWarning($"{name}: EnemyData is null!");
             return;
         }
+        if (sceneSettings == null)
+        {
+            Debug.LogError($"{name}: GameSceneConfiguration не назначен!");
+            return;
+        }
         currentHealth = data.MaxHealth;
-        HealthBarManager.Instance?.ShowHealthBar(this, currentHealth, data.MaxHealth, false); // Показываем плашку.
+       // HealthBarManager.Instance?.ShowHealthBar(this, currentHealth, data.MaxHealth, false); 
     }
 
     public virtual void TakeDamage(int amount)
     {
         currentHealth -= amount;
-        HealthBarManager.Instance?.UpdateHealthBar(this, currentHealth, data.MaxHealth); // Обновляем плашку.
+  //      HealthBarManager.Instance?.UpdateHealthBar(this, currentHealth, data.MaxHealth); 
         if (currentHealth <= 0)
         {
             Deactivate();
@@ -32,7 +39,7 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void Deactivate()
     {
-        HealthBarManager.Instance?.HideHealthBar(this); // Скрываем плашку.
+      //  HealthBarManager.Instance?.HideHealthBar(this); // Скрываем плашку.
         gameObject.SetActive(false);
         OnDeactivated.Invoke(this);
         if (CurrencyManager.Instance != null && data != null)

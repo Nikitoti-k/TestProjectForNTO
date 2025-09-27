@@ -1,3 +1,4 @@
+// Уникальное здание - штаб, цель для врагов + поражение при разрушении (оговорили с Артёмом в ТЗ, что лучше использовать его как цель для врагов)
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -21,16 +22,15 @@ public class Headquarters : BuildingBase
                 cell.Occupy(this);
             }
         }
-        Debug.Log($"{name}: Initialized at {centerCoord}, HP: {CurrentHealth}, Occupied: {occupiedCoords.Count} cells");
+        
     }
 
     public override void TakeDamage(int amount)
     {
-        Debug.Log($"{name}: Taking {amount} damage, HP left: {CurrentHealth - amount}");
+        Debug.Log($"{name}: Нанесли {amount} урона, Хп осталось: {CurrentHealth - amount}");
         CurrentHealth -= amount;
         if (CurrentHealth <= 0)
-        {
-            Debug.Log($"{name}: HP <= 0, destroying HQ");
+        {           
             DestroyBuilding();
             OnDefeat.Invoke();
         }
@@ -48,31 +48,29 @@ public class Headquarters : BuildingBase
         }
         else
         {
-            Debug.LogError($"{name}: No HexGrid!");
+            Debug.LogError($"{name}: нет HexGrid!");
         }
-        Debug.Log($"{name}: Destroying object");
         Destroy(gameObject);
     }
 
     public override void Upgrade()
     {
-        // No upgrade for HQ.
+        // Не улучшается
     }
 
-    public override void UpgradeToLevel(int level) // Изменено: public для сохранения.
+    public override void UpgradeToLevel(int level) 
     {
         currentLevel = level;
         if (data != null && data.Levels.Count > level)
         {
             CurrentHealth = data.Levels[level].MaxHealth;
             UpdateVisual(level);
-            Debug.Log($"{name}: Set level {level}, HP: {CurrentHealth}");
+          
         }
         else
         {
-            Debug.LogWarning($"{name}: Invalid level {level} or missing data!");
             CurrentHealth = data?.Levels[0].MaxHealth ?? 1;
-            Debug.Log($"{name}: Fallback HP: {CurrentHealth}");
+           
         }
     }
 
@@ -84,7 +82,7 @@ public class Headquarters : BuildingBase
 
     public override void Sell()
     {
-        // No sell for HQ.
+        // Невозможно продать цель для врагов)
     }
 
     public override List<string> GetUpgradeParameters() => new List<string>();
@@ -95,6 +93,6 @@ public class Headquarters : BuildingBase
 
     private void OnMouseDown()
     {
-        // Block UI for HQ.
+        // НЕ выводим UI
     }
 }

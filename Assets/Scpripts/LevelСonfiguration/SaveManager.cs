@@ -2,15 +2,17 @@ using System.IO;
 using UnityEngine;
 using System.Collections.Generic;
 
-// Управляет сохранением и загрузкой игровых данных в JSON.
+// Синглтон для сохранений и загрузок, сделал согласно ТЗ (сохранения: валюты, волн, зданий). Реализовал запись через JSON
 public class SaveManager : MonoBehaviour
 {
     public static SaveManager Instance { get; private set; }
     private string savePath;
 
-    // Инициализация singleton и пути сохранения.
+    [SerializeField] private GameSceneConfiguration sceneSettings; 
+
     void Awake()
     {
+       
         if (Instance != null)
         {
             Destroy(gameObject);
@@ -18,33 +20,33 @@ public class SaveManager : MonoBehaviour
         }
         Instance = this;
         savePath = Path.Combine(Application.persistentDataPath, "save.json");
-        DontDestroyOnLoad(gameObject); // Сохраняем объект между сценами.
+        DontDestroyOnLoad(gameObject);
     }
 
-    // Очищает состояние при выходе на главную сцену.
+   
     public void ResetForMainMenu()
     {
-        // Удаляем файл сохранения.
-        DeleteSave();
-        // Сбрасываем состояние менеджеров.
+        DeleteSave(); 
+    
         if (WaveManager.Instance != null)
             WaveManager.Instance.SetWaveIndex(0);
         if (CurrencyManager.Instance != null)
             CurrencyManager.Instance.SetCurrency(0);
-        // Очищаем пул мостов, чтобы избежать ссылок на уничтоженные объекты.
+    
         if (BridgePool.Instance != null)
             BridgePool.Instance.ResetPool();
     }
 
-    // Проверяет, есть ли файл сохранения.
+  
     public bool HasSave() => File.Exists(savePath);
 
-    // Сохраняет текущие данные игры (волна, валюта, здания).
+   
     public void SaveGame()
     {
+        
         if (WaveManager.Instance == null || CurrencyManager.Instance == null || HexGrid.Instance == null)
         {
-            Debug.LogError("SaveManager: Отсутствуют необходимые менеджеры!");
+            Debug.LogError("SaveManager: Отсутствуют нужные менеджеры!");
             return;
         }
 
@@ -55,6 +57,7 @@ public class SaveManager : MonoBehaviour
             buildings = new List<BuildingPlacement>()
         };
 
+        // Собирает данные о зданиях из сетки
         foreach (var kvp in HexGrid.Instance.Cells)
         {
             if (kvp.Value.Building != null && kvp.Value.Building.gameObject != null)
@@ -81,7 +84,7 @@ public class SaveManager : MonoBehaviour
         }
     }
 
-    // Загружает данные игры из файла.
+    
     public void LoadGame()
     {
         if (!HasSave())
@@ -90,18 +93,24 @@ public class SaveManager : MonoBehaviour
             return;
         }
 
+        if (sceneSettings == null)
+        {
+            Debug.LogError("SaveManager: GameSceneConfiguration не назначен!");
+            return;
+        }
+
         try
         {
             string json = File.ReadAllText(savePath);
             var save = JsonUtility.FromJson<SaveData>(json);
 
-            // Устанавливаем волну и валюту.
+           
             if (WaveManager.Instance != null)
                 WaveManager.Instance.SetWaveIndex(save.waveIndex);
             if (CurrencyManager.Instance != null)
                 CurrencyManager.Instance.SetCurrency(save.currency);
 
-            // Очищаем текущие здания.
+            
             if (HexGrid.Instance != null)
             {
                 var cells = HexGrid.Instance.Cells;
@@ -115,7 +124,7 @@ public class SaveManager : MonoBehaviour
                     }
                 }
 
-                // Удаляем собранные здания.
+               
                 foreach (var building in buildingsToRemove)
                 {
                     if (building != null)
@@ -130,10 +139,9 @@ public class SaveManager : MonoBehaviour
                 return;
             }
 
-            // Список для стен, чтобы обновить мосты после размещения.
-            var walls = new List<Wall>();
+            var walls = new List<Wall>(); 
 
-            // Размещаем здания из сохранения.
+            
             foreach (var placement in save.buildings)
             {
                 var coord = new HexCoord(placement.q, placement.r);
@@ -143,16 +151,16 @@ public class SaveManager : MonoBehaviour
                     continue;
                 }
 
-                // Проверяем соседей для штаба.
+              
                 if (placement.buildingName == "Штаб" && !AreNeighborsFree(coord))
                 {
                     Debug.LogWarning($"SaveManager: Нельзя разместить Штаб в {coord}, соседние клетки заняты");
                     continue;
                 }
 
-                // Находим префаб здания.
+             
                 GameObject prefab = placement.buildingName == "Штаб"
-                    ? HexGrid.Instance.headquartersPrefab
+                    ? sceneSettings.HeadquartersPrefab
                     : accessible.Buildings.Find(b => b.BuildingData != null && b.BuildingData.Name == placement.buildingName)?.BuildingPrefab;
 
                 if (prefab == null)
@@ -161,7 +169,7 @@ public class SaveManager : MonoBehaviour
                     continue;
                 }
 
-                // Создаём и размещаем здание.
+                
                 var buildingObj = Instantiate(prefab, HexGrid.Instance.GetWorldPosFromCoord(coord), Quaternion.identity);
                 if (buildingObj == null || !buildingObj.TryGetComponent<BuildingBase>(out var building))
                 {
@@ -173,7 +181,7 @@ public class SaveManager : MonoBehaviour
                 HexGrid.Instance.PlaceBuilding(coord, building);
                 building.UpgradeToLevel(placement.level);
 
-                // Если здание - стена, сохраняем для последующего обновления мостов.
+              
                 if (building is Wall wall)
                 {
                     walls.Add(wall);
@@ -182,14 +190,14 @@ public class SaveManager : MonoBehaviour
                 Debug.Log($"Загружено: {placement.buildingName} в {coord}, уровень {placement.level}");
             }
 
-            // Обновляем мосты для всех стен после размещения зданий.
+            // Обновляет перемычки для всех стен
             foreach (var wall in walls)
             {
                 if (wall != null)
                     wall.UpdateBridges();
             }
 
-            // Обновляем индикатор спавна для текущей волны.
+           
             if (WaveManager.Instance != null)
                 WaveManager.Instance.ShowNextWaveSpawnIndicator();
 
@@ -201,7 +209,7 @@ public class SaveManager : MonoBehaviour
         }
     }
 
-    // Проверяет, свободны ли соседние клетки.
+   
     private bool AreNeighborsFree(HexCoord coord)
     {
         if (HexGrid.Instance == null) return false;
@@ -212,7 +220,7 @@ public class SaveManager : MonoBehaviour
         return true;
     }
 
-    // Удаляет файл сохранения.
+   
     public void DeleteSave()
     {
         if (HasSave())

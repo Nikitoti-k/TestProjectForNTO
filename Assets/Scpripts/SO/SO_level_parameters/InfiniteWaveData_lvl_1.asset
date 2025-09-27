@@ -16,11 +16,11 @@ MonoBehaviour:
   - EnemyPrefab: {fileID: 6075044335832665027, guid: 5f2534d42d510cf408f1a27f0095916d, type: 3}
     BaseCount: 5
     CountGrowthRate: 3
-    StartWave: 1
-    BaseInterval: 0.2
-    IntervalReductionRate: 0
-  BaseReward: 500
-  RewardGrowthRate: 100
+    StartWave: 0
+    BaseInterval: 0.5
+    IntervalReductionRate: 0.05
+  BaseReward: 0
+  RewardGrowthRate: 0
   SpawnType: 1
   CircleRadius: 0
   SpawnFrontPrefab: {fileID: 7120400873932644193, guid: 44e8761579c5ea94194c5ccadcb24c8f, type: 3}

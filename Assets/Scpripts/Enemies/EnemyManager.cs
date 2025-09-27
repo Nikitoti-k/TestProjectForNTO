@@ -1,4 +1,4 @@
-// Управляет пулом врагов, спавнит их в точках, singleton.
+// Управляет пулом врагов, спавнит их в точках, синглтон
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -62,7 +62,7 @@ public class EnemyManager : MonoBehaviour
         EnemyBase prefabEnemy = enemyPrefab.GetComponent<EnemyBase>();
         if (prefabEnemy == null)
         {
-            Debug.LogWarning($"Enemy prefab {enemyPrefab.name} has no EnemyBase!");
+            Debug.LogWarning($"Префаб врага {enemyPrefab.name} без  EnemyBase!");
             return null;
         }
 
@@ -83,7 +83,7 @@ public class EnemyManager : MonoBehaviour
     {
         if (spawnPoints == null || spawnPoints.Length == 0)
         {
-            Debug.LogWarning("No spawn points in EnemyManager!");
+            Debug.LogWarning("Не назначены точки спавна!");
             return transform;
         }
         return spawnPoints[Random.Range(0, spawnPoints.Length)];

@@ -196,9 +196,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   data: {fileID: 11400000, guid: ec57b56e65b48e44cac4291b7ced6b39, type: 2}
-  sellPriceMultiplier: 0.8
-  bridgePrefab: {fileID: 2655944011070913315, guid: b7b662cb50a580a4fbe033b596fdb640, type: 3}
   modelSlot: {fileID: 8226104432023529039}
+  sceneSettings: {fileID: 11400000, guid: ac9a18866639eb440bc1786aa82cd067, type: 2}
+  OnBuildingDestroyed:
+    m_PersistentCalls:
+      m_Calls: []
+  bridgePrefab: {fileID: 2655944011070913315, guid: b7b662cb50a580a4fbe033b596fdb640, type: 3}
 --- !u!208 &-2916194840624836922
 NavMeshObstacle:
   m_ObjectHideFlags: 0
