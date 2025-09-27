@@ -19,6 +19,12 @@ MonoBehaviour:
     StartWave: 0
     BaseInterval: 0.5
     IntervalReductionRate: 0.05
+  - EnemyPrefab: {fileID: 6075044335832665027, guid: 54cf119a8a09ddc48a6d4394f6625e33, type: 3}
+    BaseCount: 1
+    CountGrowthRate: 2
+    StartWave: 4
+    BaseInterval: 1
+    IntervalReductionRate: 0.05
   BaseReward: 0
   RewardGrowthRate: 0
   SpawnType: 1

@@ -6,12 +6,13 @@ public class EnemyManager : MonoBehaviour
 {
     public static EnemyManager Instance { get; private set; }
 
-    [SerializeField] private BasicEnemy enemyPrefab;
-    [SerializeField] private int poolSize = 20;
+    [SerializeField] private WaveData waveData; 
+    [SerializeField] private InfiniteWaveData infiniteWaveData; 
+    [SerializeField] private int poolSizePerType = 20;
     [SerializeField] private Transform[] spawnPoints;
     public Transform[] SpawnPoints => spawnPoints;
 
-    private List<EnemyBase> enemyPool = new List<EnemyBase>();
+    private Dictionary<GameObject, List<EnemyBase>> enemyPools = new Dictionary<GameObject, List<EnemyBase>>(); 
 
     private void Awake()
     {
@@ -27,16 +28,64 @@ public class EnemyManager : MonoBehaviour
 
     private void Start()
     {
-        InitializePool();
+        InitializePools();
     }
 
-    private void InitializePool()
+    
+    private void InitializePools()
     {
-        for (int i = 0; i < poolSize; i++)
+        HashSet<GameObject> uniquePrefabs = new HashSet<GameObject>();
+
+        
+        if (waveData != null && waveData.Waves != null)
         {
-            BasicEnemy enemy = Instantiate(enemyPrefab, Vector3.zero, Quaternion.identity);
-            enemy.gameObject.SetActive(false);
-            enemyPool.Add(enemy);
+            foreach (var wave in waveData.Waves)
+            {
+                foreach (var enemyConfig in wave.Enemies)
+                {
+                    if (enemyConfig.EnemyPrefab != null)
+                    {
+                        uniquePrefabs.Add(enemyConfig.EnemyPrefab);
+                    }
+                }
+            }
+        }
+
+      
+        if (infiniteWaveData != null && infiniteWaveData.Enemies != null)
+        {
+            foreach (var enemyTemplate in infiniteWaveData.Enemies)
+            {
+                if (enemyTemplate.EnemyPrefab != null)
+                {
+                    uniquePrefabs.Add(enemyTemplate.EnemyPrefab);
+                }
+            }
+        }
+
+        if (uniquePrefabs.Count == 0)
+        {
+            Debug.LogError("EnemyManager: Не найдены префабы врагов в WaveData или InfiniteWaveData!");
+            return;
+        }
+
+        // Инициализируем пулы для каждого уникального префаба
+        foreach (var prefab in uniquePrefabs)
+        {
+            if (prefab == null) continue;
+            enemyPools[prefab] = new List<EnemyBase>();
+
+            for (int i = 0; i < poolSizePerType; i++)
+            {
+                EnemyBase enemy = Instantiate(prefab, Vector3.zero, Quaternion.identity).GetComponent<EnemyBase>();
+                if (enemy == null)
+                {
+                    Debug.LogWarning($"EnemyManager: Префаб {prefab.name} не содержит компонент EnemyBase!");
+                    continue;
+                }
+                enemy.gameObject.SetActive(false);
+                enemyPools[prefab].Add(enemy);
+            }
         }
     }
 
@@ -59,23 +108,44 @@ public class EnemyManager : MonoBehaviour
 
     private EnemyBase GetFromPool(GameObject enemyPrefab)
     {
-        EnemyBase prefabEnemy = enemyPrefab.GetComponent<EnemyBase>();
-        if (prefabEnemy == null)
+        if (enemyPrefab == null)
         {
-            Debug.LogWarning($"Префаб врага {enemyPrefab.name} без  EnemyBase!");
+            Debug.LogWarning("EnemyManager: Передан null префаб!");
             return null;
         }
 
-        foreach (var enemy in enemyPool)
+        EnemyBase prefabEnemy = enemyPrefab.GetComponent<EnemyBase>();
+        if (prefabEnemy == null)
         {
-            if (!enemy.gameObject.activeInHierarchy && enemy.GetType() == prefabEnemy.GetType())
+            Debug.LogWarning($"EnemyManager: Префаб {enemyPrefab.name} не содержит компонент EnemyBase!");
+            return null;
+        }
+
+       
+        if (!enemyPools.ContainsKey(enemyPrefab))
+        {
+            enemyPools[enemyPrefab] = new List<EnemyBase>();
+            Debug.LogWarning($"EnemyManager: Пул для префаба {enemyPrefab.name} не инициализирован, создаем новый.");
+        }
+
+        // Ищем неактивный объект в пуле
+        foreach (var enemy in enemyPools[enemyPrefab])
+        {
+            if (!enemy.gameObject.activeInHierarchy)
             {
                 return enemy;
             }
         }
+
+        // Если нет свободных врагов, создаем новый
         EnemyBase newEnemy = Instantiate(enemyPrefab, Vector3.zero, Quaternion.identity).GetComponent<EnemyBase>();
+        if (newEnemy == null)
+        {
+            Debug.LogWarning($"EnemyManager: Не удалось создать новый экземпляр для префаба {enemyPrefab.name}!");
+            return null;
+        }
         newEnemy.gameObject.SetActive(false);
-        enemyPool.Add(newEnemy);
+        enemyPools[enemyPrefab].Add(newEnemy);
         return newEnemy;
     }
 

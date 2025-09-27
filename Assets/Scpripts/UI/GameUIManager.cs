@@ -1,9 +1,8 @@
-// Управляет основным UI: кнопки строительства, валюта, ошибки, волны, поражение (всё кроме UI улучшения зданий - решил разделиить отвественность)
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
-
+// Синглтон, управляет UI (кроме UI прокачки зданий - решил разделить ответсвеность)
 public class GameUIManager : MonoBehaviour
 {
     public static GameUIManager Instance { get; private set; }
@@ -22,15 +21,13 @@ public class GameUIManager : MonoBehaviour
     [SerializeField] private Button exitToMenuButton;
     private Headquarters headquarters;
 
-
-
     private void ExitToMenu()
     {
         SceneManager.LoadScene(mainMenuSceneName);
     }
+
     private void Awake()
     {
-       
         exitToMenuButton.onClick.AddListener(ExitToMenu);
         if (Instance != null)
         {
@@ -48,7 +45,6 @@ public class GameUIManager : MonoBehaviour
             return;
         }
 
-
         CurrencyManager.Instance?.OnCurrencyChanged.AddListener(UpdateCurrencyUI);
         UpdateCurrencyUI(CurrencyManager.Instance?.CurrentCurrency ?? 0);
 
@@ -58,7 +54,6 @@ public class GameUIManager : MonoBehaviour
         }
         foreach (var building in accessibleBuildings.Buildings)
         {
-          
             var buttonObj = Instantiate(buttonPrefab, buttonParent);
             var button = buttonObj.GetComponent<Button>();
             var text = buttonObj.GetComponentInChildren<TextMeshProUGUI>();
@@ -67,6 +62,11 @@ public class GameUIManager : MonoBehaviour
 
             button.onClick.AddListener(() =>
             {
+                if (WaveManager.Instance != null && WaveManager.Instance.IsWaveActive)
+                {
+                    ShowError("Нельзя строить во время волны!");
+                    return;
+                }
                 if (CurrencyManager.Instance.CanAfford(cost))
                 {
                     BuildingManager.Instance.StartBuilding(building.BuildingPrefab, cost);
@@ -84,7 +84,7 @@ public class GameUIManager : MonoBehaviour
             WaveManager.Instance?.OnWaveStarted.AddListener(() =>
             {
                 startWaveButton.gameObject.SetActive(false);
-                BuildingUpgradeUIManager.Instance?.HideUI(); // Новый: закрываем UI улучшений.
+                BuildingUpgradeUIManager.Instance?.HideUI();
             });
             WaveManager.Instance?.OnWaveEnded.AddListener(() => startWaveButton.gameObject.SetActive(true));
             startWaveButton.gameObject.SetActive(true);

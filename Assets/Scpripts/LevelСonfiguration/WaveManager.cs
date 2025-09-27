@@ -8,23 +8,24 @@ using System.Collections;
 public class WaveManager : MonoBehaviour
 {
     public static WaveManager Instance { get; private set; }
-    public int CurrentWaveIndex { get; private set; } 
+    public int CurrentWaveIndex { get; private set; }
+    public bool IsWaveActive { get { return isWaveActive; } }
 
     [SerializeField] private WaveData waveData;
     [SerializeField] private InfiniteWaveData infiniteData;
     [SerializeField] private GameSceneConfiguration sceneSettings;
     [SerializeField] private GameObject spawnIndicatorPrefab;
     public UnityEvent OnWaveStarted;
-    public UnityEvent OnWaveEnded; 
+    public UnityEvent OnWaveEnded;
 
-    private readonly List<EnemyBase> activeEnemies = new List<EnemyBase>(); 
-    private bool isWaveActive; 
+    private readonly List<EnemyBase> activeEnemies = new List<EnemyBase>();
+    private bool isWaveActive;
     private bool isSpawning;
-    private bool isInfiniteMode; 
+    private bool isInfiniteMode;
     private GameObject currentFrontObj;
     private GameObject spawnIndicator;
 
-    // Инициализация singleton.
+  
     void Awake()
     {
         if (Instance != null)
@@ -35,7 +36,7 @@ public class WaveManager : MonoBehaviour
         Instance = this;
     }
 
-   
+
     void Start()
     {
         if (spawnIndicatorPrefab == null)
@@ -57,14 +58,14 @@ public class WaveManager : MonoBehaviour
         ShowNextWaveSpawnIndicator();
     }
 
-   
+
     void FixedUpdate()
     {
         if (isWaveActive && !isSpawning && activeEnemies.Count == 0)
             EndWave();
     }
 
-   
+
     public void StartNextWave()
     {
         if (isWaveActive)
@@ -101,10 +102,10 @@ public class WaveManager : MonoBehaviour
     public void SetWaveIndex(int index)
     {
         CurrentWaveIndex = Mathf.Max(0, index);
-        ShowNextWaveSpawnIndicator(); 
+        ShowNextWaveSpawnIndicator();
     }
 
-  
+
     public void ShowNextWaveSpawnIndicator()
     {
         if (spawnIndicator == null)
@@ -120,7 +121,7 @@ public class WaveManager : MonoBehaviour
             HideSpawnIndicator();
     }
 
-  
+
     private Vector3 GetNextWaveSpawnPoint()
     {
         if (waveData != null && waveData.Waves != null && waveData.Waves.Count > 0 && CurrentWaveIndex < waveData.Waves.Count)
@@ -131,7 +132,7 @@ public class WaveManager : MonoBehaviour
                 var spawnPoints = GetSpawnPoints(wave);
                 return spawnPoints.Count > 0 ? spawnPoints[0] : (EnemyManager.Instance != null ? EnemyManager.Instance.GetRandomSpawnPoint().position : Vector3.zero);
             }
-        
+
             return Random.insideUnitCircle.normalized * wave.CircleSpawnRadius;
         }
         else if (infiniteData != null && infiniteData.SpawnType == SpawnType.SequentialFronts && infiniteData.SpawnFrontPrefab != null)
@@ -146,7 +147,7 @@ public class WaveManager : MonoBehaviour
         return EnemyManager.Instance != null ? EnemyManager.Instance.GetRandomSpawnPoint().position : transform.position;
     }
 
-  
+
     private void ShowSpawnIndicator(Vector3 spawnPos)
     {
         if (spawnIndicator == null) return;
@@ -154,7 +155,7 @@ public class WaveManager : MonoBehaviour
         spawnIndicator.transform.position = spawnPos + Vector3.up * 2f;
     }
 
-   
+
     private void HideSpawnIndicator()
     {
         if (spawnIndicator != null)
@@ -170,6 +171,12 @@ public class WaveManager : MonoBehaviour
 
         foreach (var config in wave.Enemies)
         {
+            if (config.EnemyPrefab == null)
+            {
+                Debug.LogWarning($"WaveManager: Пропущен EnemyPrefab в конфигурации волны {CurrentWaveIndex + 1}!");
+                continue;
+            }
+
             for (int i = 0; i < config.Count; i++)
             {
                 Vector3 spawnPos = wave.UseCircleSpawn
@@ -184,7 +191,7 @@ public class WaveManager : MonoBehaviour
             }
         }
         isSpawning = false;
-        HideSpawnIndicator(); 
+        HideSpawnIndicator();
     }
 
     // Спавнит врагов бесконечной волны
@@ -196,7 +203,7 @@ public class WaveManager : MonoBehaviour
 
         foreach (var template in infiniteData.Enemies)
         {
-            if (waveNumber < template.StartWave) continue;
+            if (waveNumber < template.StartWave || template.EnemyPrefab == null) continue;
 
             int count = Mathf.RoundToInt(template.BaseCount + template.CountGrowthRate * waveNumber);
             float interval = Mathf.Max(template.BaseInterval * (1 - template.IntervalReductionRate * waveNumber), 0.5f);
@@ -210,7 +217,7 @@ public class WaveManager : MonoBehaviour
             }
         }
         isSpawning = false;
-        HideSpawnIndicator(); 
+        HideSpawnIndicator();
     }
 
     // Получает точки спавна для обычной волны
@@ -243,7 +250,7 @@ public class WaveManager : MonoBehaviour
         return spawnPoints.Count > 0 ? spawnPoints : new List<Vector3> { transform.position };
     }
 
-  
+
     private List<Vector3> GetGlobalSpawnPoints()
     {
         var spawnPoints = new List<Vector3>();
@@ -277,7 +284,7 @@ public class WaveManager : MonoBehaviour
         return currentFrontObj.TryGetComponent<SpawnPointMap>(out var map) ? map.GetSpawnPoints() : new List<Transform>();
     }
 
-  
+
     private Vector3 GetInfiniteSpawnPoint(int waveNumber, List<Transform> spawnPoints)
     {
         if (infiniteData.SpawnType == SpawnType.Circle)
@@ -288,7 +295,7 @@ public class WaveManager : MonoBehaviour
             : transform.position;
     }
 
-   
+
     private Vector3 AdjustSpawnPosition(Vector3 spawnPos)
     {
         if (sceneSettings == null)
@@ -313,9 +320,15 @@ public class WaveManager : MonoBehaviour
         return spawnPos;
     }
 
-  
+
     private void SpawnEnemy(GameObject prefab, Vector3 position)
     {
+        if (prefab == null)
+        {
+            Debug.LogWarning("WaveManager: Пропущен префаб врага для спавна!");
+            return;
+        }
+
         var enemy = EnemyManager.Instance.SpawnEnemy(prefab, position);
         if (enemy != null)
         {
@@ -324,7 +337,7 @@ public class WaveManager : MonoBehaviour
         }
     }
 
-    
+
     private void EnemyDeactivated(EnemyBase enemy) => activeEnemies.Remove(enemy);
 
     // Завершает волну, начисляет награду, сохраняет игру
@@ -350,6 +363,6 @@ public class WaveManager : MonoBehaviour
         }
 
         SaveManager.Instance.SaveGame();
-        ShowNextWaveSpawnIndicator(); 
+        ShowNextWaveSpawnIndicator();
     }
 }

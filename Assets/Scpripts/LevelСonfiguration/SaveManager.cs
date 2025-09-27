@@ -76,7 +76,7 @@ public class SaveManager : MonoBehaviour
         {
             string json = JsonUtility.ToJson(save, true);
             File.WriteAllText(savePath, json);
-            Debug.Log($"Игра сохранена: {savePath}. Волна: {save.waveIndex}, Валюта: {save.currency}, Зданий: {save.buildings.Count}");
+            Debug.Log($"Игра сохранена: {savePath}. Волна: {save.waveIndex}, Валюта: {save.currency}, Занятых клеток: {save.buildings.Count}");
         }
         catch (System.Exception e)
         {

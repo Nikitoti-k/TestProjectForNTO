@@ -1,4 +1,3 @@
-// ”правл€ет UI улучшени€/продажи зданий, отображает параметры и кнопки
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -55,9 +54,16 @@ public class BuildingUpgradeUIManager : MonoBehaviour
             }
         }
     }
+
     // Ѕлагодар€ модульности в SO можно удобно выводить уникальные прокачиваемые параметры дл€ каждого здани€
     public void ShowUI(IBuildingInteractable building)
     {
+        if (WaveManager.Instance != null && WaveManager.Instance.IsWaveActive)
+        {
+            GameUIManager.Instance?.ShowError("Ќельз€ взаимодействовать с здани€ми во врем€ волны!");
+            return;
+        }
+
         if (building == null)
         {
             Debug.LogError("BuildingUpgradeUIManager: Null building!");
@@ -94,14 +100,23 @@ public class BuildingUpgradeUIManager : MonoBehaviour
 
     private void OnUpgradeButtonClicked()
     {
+        if (WaveManager.Instance != null && WaveManager.Instance.IsWaveActive)
+        {
+            GameUIManager.Instance?.ShowError("Ќельз€ улучшать здани€ во врем€ волны!");
+            return;
+        }
         if (currentBuilding == null || !currentBuilding.CanUpgrade()) return;
-        CurrencyManager.Instance.SpendCurrency(currentBuilding.GetUpgradeCost());
         currentBuilding.Upgrade();
         ShowUI(currentBuilding);
     }
 
     private void OnSellButtonClicked()
     {
+        if (WaveManager.Instance != null && WaveManager.Instance.IsWaveActive)
+        {
+            GameUIManager.Instance?.ShowError("Ќельз€ продавать здани€ во врем€ волны!");
+            return;
+        }
         if (currentBuilding == null) return;
         currentBuilding.Sell();
         HideUI();
