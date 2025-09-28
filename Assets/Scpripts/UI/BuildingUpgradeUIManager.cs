@@ -55,7 +55,7 @@ public class BuildingUpgradeUIManager : MonoBehaviour
         }
     }
 
-    // Благодаря модульности в SO можно удобно выводить уникальные прокачиваемые параметры для каждого здания
+    // Благодаря модульности в SO, можно удобно выводить уникальные прокачиваемые параметры для каждого здания
     public void ShowUI(IBuildingInteractable building)
     {
         if (WaveManager.Instance != null && WaveManager.Instance.IsWaveActive)

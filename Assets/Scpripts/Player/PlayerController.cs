@@ -1,44 +1,36 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-
+// Управление камерой на правую кнопку мыши для удобства пользования UI + изначально контролер писался под 3 лицо
 public class PlayerController : MonoBehaviour
 {
     private Controls inputActions;
-    public float moveSpeed = 5f; // Скорость движения
-    public float rotationSpeed = 720f; // Скорость поворота (градусы/сек)
-    public GameObject thirdPersonCameraObject; // Объект камеры для третьего лица
-    public GameObject firstPersonCameraObject; // Объект камеры для первого лица
-    public Key togglePerspectiveKey = Key.F; // Клавиша для переключения перспективы
+    public float moveSpeed = 5f; 
+    public float mouseSensitivity = 2f; 
+    public GameObject firstPersonCameraObject; 
     private Vector2 moveInput;
+    private Vector2 lookInput;
     private Rigidbody rb;
-    private bool isFirstPerson = false;
+    private Camera fpsCamera;
+    private float xRotation = 0f;
+    private bool isRightMouseButtonHeld = false;
 
     private void Awake()
     {
-        // Инициализация Input System
         inputActions = new Controls();
-
-        // Проверка Rigidbody
         rb = GetComponent<Rigidbody>();
-        if (rb == null)
-        {
-            Debug.LogError("На объекте игрока отсутствует компонент Rigidbody! Добавьте Rigidbody и заморозьте вращение по X и Z.");
-        }
-
-        // Проверка объектов камер
-        if (thirdPersonCameraObject == null || firstPersonCameraObject == null)
-        {
-            Debug.LogError("Один или оба объекта камер (ThirdPersonCameraObject или FirstPersonCameraObject) не назначены в инспекторе!");
-        }
-
-        // Начальная настройка камер
-        UpdateCameraPerspective();
+        fpsCamera = firstPersonCameraObject.GetComponent<Camera>();
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
 
     private void OnEnable()
     {
         inputActions.Player.Move.performed += ctx => moveInput = ctx.ReadValue<Vector2>();
         inputActions.Player.Move.canceled += ctx => moveInput = Vector2.zero;
+        inputActions.Player.Look.performed += ctx => lookInput = ctx.ReadValue<Vector2>();
+        inputActions.Player.Look.canceled += ctx => lookInput = Vector2.zero;
+        inputActions.Player.Look.performed += ctx => isRightMouseButtonHeld = true;
+        inputActions.Player.Look.canceled += ctx => isRightMouseButtonHeld = false;
         inputActions.Player.Enable();
     }
 
@@ -49,71 +41,47 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        // Проверка нажатия клавиши для переключения перспективы
-        if (Keyboard.current != null && Keyboard.current[togglePerspectiveKey].wasPressedThisFrame)
+        
+        if (fpsCamera != null && isRightMouseButtonHeld)
         {
-            isFirstPerson = !isFirstPerson;
-            UpdateCameraPerspective();
+            float mouseX = lookInput.x * mouseSensitivity * Time.deltaTime;
+            float mouseY = lookInput.y * mouseSensitivity * Time.deltaTime;
+
+            
+            xRotation -= mouseY;
+            xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+            fpsCamera.transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
+
+           
+            transform.Rotate(Vector3.up * mouseX);
         }
     }
 
     private void FixedUpdate()
     {
-        // Получаем активную камеру
-        GameObject activeCameraObject = isFirstPerson ? firstPersonCameraObject : thirdPersonCameraObject;
-        if (activeCameraObject == null) return;
+        if (fpsCamera == null) return;
 
-        Camera activeCamera = activeCameraObject.GetComponent<Camera>();
-         if (activeCamera == null)
-         {
-             Debug.LogError($"Объект {activeCameraObject.name} не содержит компонент Camera!");
-             return;
-         }
-
-         // Получаем направление камеры
-         Vector3 cameraForward = activeCamera.transform.forward;
-         Vector3 cameraRight = activeCamera.transform.right;
-         cameraForward.y = 0f; // Движение только по XZ
-         cameraRight.y = 0f;
-         cameraForward = cameraForward.normalized;
-         cameraRight = cameraRight.normalized;
-
-         // Вычисляем направление движения
-         Vector3 moveDirection = cameraForward * moveInput.y + cameraRight * moveInput.x;
         
-        // Применяем движение через Rigidbody
+        Vector3 cameraForward = fpsCamera.transform.forward;
+        Vector3 cameraRight = fpsCamera.transform.right;
+        cameraForward.y = 0f; 
+        cameraRight.y = 0f;
+        cameraForward = cameraForward.normalized;
+        cameraRight = cameraRight.normalized;
+
+        
+        Vector3 moveDirection = cameraForward * moveInput.y + cameraRight * moveInput.x;
+
+        
         if (moveDirection != Vector3.zero)
         {
-            // Движение
             Vector3 moveVelocity = moveDirection * moveSpeed;
-            rb.linearVelocity = new Vector3(moveVelocity.x, rb.linearVelocity.y, moveVelocity.z); // Сохраняем Y для гравитации
-
-            // Плавный поворот игрока в сторону движения
-            Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-            rb.rotation = Quaternion.RotateTowards(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
+            rb.linearVelocity = new Vector3(moveVelocity.x, rb.linearVelocity.y, moveVelocity.z); 
         }
         else
         {
-            // Остановка горизонтального движения
+           
             rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
-        }
-    }
-
-    private void UpdateCameraPerspective()
-    {
-        if (thirdPersonCameraObject == null || firstPersonCameraObject == null) return;
-
-        if (isFirstPerson)
-        {
-            // Активируем камеру от первого лица, деактивируем от третьего
-            thirdPersonCameraObject.SetActive(false);
-            firstPersonCameraObject.SetActive(true);
-        }
-        else
-        {
-            // Активируем камеру от третьего лица, деактивируем от первого
-            firstPersonCameraObject.SetActive(false);
-            thirdPersonCameraObject.SetActive(true);
         }
     }
 }

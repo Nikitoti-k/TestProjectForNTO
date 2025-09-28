@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
-
+//База для врага
 public abstract class EnemyBase : MonoBehaviour
 {
     [SerializeField] protected EnemyData data;
@@ -24,13 +24,13 @@ public abstract class EnemyBase : MonoBehaviour
             return;
         }
         currentHealth = data.MaxHealth;
-       // HealthBarManager.Instance?.ShowHealthBar(this, currentHealth, data.MaxHealth, false); 
+      
     }
 
     public virtual void TakeDamage(int amount)
     {
         currentHealth -= amount;
-  //      HealthBarManager.Instance?.UpdateHealthBar(this, currentHealth, data.MaxHealth); 
+ 
         if (currentHealth <= 0)
         {
             Deactivate();
@@ -39,7 +39,7 @@ public abstract class EnemyBase : MonoBehaviour
 
     protected virtual void Deactivate()
     {
-      //  HealthBarManager.Instance?.HideHealthBar(this); // Скрываем плашку.
+     
         gameObject.SetActive(false);
         OnDeactivated.Invoke(this);
         if (CurrencyManager.Instance != null && data != null)

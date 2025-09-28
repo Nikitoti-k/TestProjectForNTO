@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
-
+//Обычный враг - идёт по плоскости, уничтожает все здания на своём пути, финальная цель - штаб.
 [RequireComponent(typeof(NavMeshAgent))]
 public class BasicEnemy : EnemyBase
 {
@@ -125,7 +125,7 @@ public class BasicEnemy : EnemyBase
             if (dist < minDist && dist <= distToHQ)
             {
                 Vector3 dirToBuilding = (building.Position - transform.position).normalized;
-                if (Vector3.Angle(dirToHQ, dirToBuilding) <= 90f)
+                if (Vector3.Angle(dirToHQ, dirToBuilding) <= 90f) // чтобы уничтожал только те здания, которые стоят у него на пути
                 {
                     minDist = dist;
                     closest = building;

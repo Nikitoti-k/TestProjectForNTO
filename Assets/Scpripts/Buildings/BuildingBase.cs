@@ -123,7 +123,7 @@ public abstract class BuildingBase : MonoBehaviour, IBuildingInteractable
 
     public virtual Vector3 GetUIPosition()
     {
-        return transform.position + Vector3.up * 2f;
+        return transform.position + Vector3.up * 1.5f;
     }
 
     public virtual List<string> GetUpgradeParameters()

@@ -76,6 +76,10 @@ public class TurretProjectile : MonoBehaviour
             enemy.TakeDamage((int)damage);
             Deactivate();
         }
+        else
+        {
+            Deactivate();
+        }
     }
 
     private void Deactivate()

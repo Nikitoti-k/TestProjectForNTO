@@ -61,7 +61,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1, y: 0.6, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 635221329703756645}
@@ -115,9 +115,6 @@ MonoBehaviour:
   OnBuildingDestroyed:
     m_PersistentCalls:
       m_Calls: []
-  enemyLayer:
-    serializedVersion: 2
-    m_Bits: 128
 --- !u!208 &1139299419170858674
 NavMeshObstacle:
   m_ObjectHideFlags: 0
@@ -188,7 +185,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8651573364317603556, guid: 092446e09160b3e43ae1fc477ab01bf7, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.2768
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8651573364317603556, guid: 092446e09160b3e43ae1fc477ab01bf7, type: 3}
       propertyPath: m_LocalPosition.z
