@@ -12,16 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3b621c7f79e2aca439789dc622094fc1, type: 3}
   m_Name: TurretData
   m_EditorClassIdentifier: 
+  name: "\u0422\u0443\u0440\u0435\u043B\u044C"
+  maxHPDisplayName: "\u041C\u0430\u043A\u0441. \u0425\u041F"
+  costDisplayName: "\u0421\u0442\u043E\u0438\u043C\u043E\u0441\u0442\u044C"
   Levels:
   - Cost: 100
-    Damage: 10
-    FireRate: 2
-    Range: 5
+    MaxHealth: 100
+    Model_view: {fileID: 296473714273952512, guid: 092446e09160b3e43ae1fc477ab01bf7, type: 3}
   - Cost: 200
-    Damage: 0
-    FireRate: 0
-    Range: 0
+    MaxHealth: 200
+    Model_view: {fileID: 296473714273952512, guid: 942462e9ead249747afd58d019b02508, type: 3}
   - Cost: 400
-    Damage: 0
-    FireRate: 0
-    Range: 0
+    MaxHealth: 400
+    Model_view: {fileID: 296473714273952512, guid: 3bffb51d1176c484789ec156160d9f9c, type: 3}
+  Modules:
+  - {fileID: 11400000, guid: 47626710649338840b07906c4c236e43, type: 2}

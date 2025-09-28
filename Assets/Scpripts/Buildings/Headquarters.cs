@@ -1,48 +1,98 @@
+// Уникальное здание - штаб, цель для врагов + поражение при разрушении (оговорили с Артёмом в ТЗ, что лучше использовать его как цель для врагов)
 using System.Collections.Generic;
 using UnityEngine;
-// Класс уникального здания штаб - цели врагов
+using UnityEngine.Events;
+
 public class Headquarters : BuildingBase
 {
-    private List<HexCoord> occupiedCoords = new List<HexCoord>(); 
-
+    private List<HexCoord> occupiedCoords = new List<HexCoord>();
     public List<HexCoord> OccupiedCoords => occupiedCoords;
+    public UnityEvent OnDefeat = new UnityEvent();
 
     public override void Initialize(HexCoord centerCoord)
     {
         base.Initialize(centerCoord);
-        // Занимаем центр и 6 соседних клеток
+        occupiedCoords.Clear();
         occupiedCoords.Add(centerCoord);
-        var neighbors = GetNeighborCoords(centerCoord);
-        occupiedCoords.AddRange(neighbors);
+        occupiedCoords.AddRange(HexGrid.Instance.GetNeighborCoords(centerCoord));
+        foreach (var coord in occupiedCoords)
+        {
+            if (HexGrid.Instance.Cells.TryGetValue(coord, out var cell))
+            {
+                cell.Occupy(this);
+            }
+        }
+        
     }
 
-    public override void TakeDamage(int damage)
+    public override void TakeDamage(int amount)
     {
-        base.TakeDamage(damage);
-       
+        Debug.Log($"{name}: Нанесли {amount} урона, Хп осталось: {CurrentHealth - amount}");
+        CurrentHealth -= amount;
+        if (CurrentHealth <= 0)
+        {           
+            DestroyBuilding();
+            OnDefeat.Invoke();
+        }
     }
 
     protected override void DestroyBuilding()
     {
-        base.DestroyBuilding();
-       
-       
+        if (HexGrid.Instance != null)
+        {
+            foreach (var coord in occupiedCoords)
+            {
+                HexGrid.Instance.FreeCell(coord);
+            }
+            Debug.Log($"{name}: Freed {occupiedCoords.Count} cells starting from {GridPosition}");
+        }
+        else
+        {
+            Debug.LogError($"{name}: нет HexGrid!");
+        }
+        Destroy(gameObject);
     }
 
-    private List<HexCoord> GetNeighborCoords(HexCoord center)
+    public override void Upgrade()
     {
-        
-        var directions = new HexCoord[]
+        // Не улучшается
+    }
+
+    public override void UpgradeToLevel(int level) 
+    {
+        currentLevel = level;
+        if (data != null && data.Levels.Count > level)
         {
-            new HexCoord(1, 0), new HexCoord(1, -1), new HexCoord(0, -1),
-            new HexCoord(-1, 0), new HexCoord(-1, 1), new HexCoord(0, 1)
-        };
-        var neighbors = new List<HexCoord>();
-        foreach (var dir in directions)
-        {
-            var neighbor = new HexCoord(center.q + dir.q, center.r + dir.r);
-            neighbors.Add(neighbor);
+            CurrentHealth = data.Levels[level].MaxHealth;
+            UpdateVisual(level);
+          
         }
-        return neighbors;
+        else
+        {
+            CurrentHealth = data?.Levels[0].MaxHealth ?? 1;
+           
+        }
+    }
+
+    public override int GetUpgradeCost() => 0;
+
+    public override int GetSellPrice() => 0;
+
+    public override bool CanUpgrade() => false;
+
+    public override void Sell()
+    {
+        // Невозможно продать цель для врагов)
+    }
+
+    public override List<string> GetUpgradeParameters() => new List<string>();
+
+    public override string GetLevelDisplay() => "Макс. уровень";
+
+    public override string GetBuildingName() => "Штаб";
+
+    private void OnMouseDown()
+    {
+        // НЕ выводим UI
     }
 }

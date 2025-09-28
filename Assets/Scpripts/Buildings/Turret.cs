@@ -1,93 +1,96 @@
 using UnityEngine;
-// первая башня - турель
+using System.Collections.Generic;
+// Бащня турели - стреляет по ближайшим врагам, проджектайлы берёт из пула
 public class Turret : BuildingBase
 {
-    [SerializeField] private TurretData data;
-    [SerializeField] private LayerMask enemyLayer;
-    [SerializeField] private Transform projectileSpawnPoint;
-
-    private int currentLevel = 0;
-    private float nextFireTime = 0f;
+    private float nextFireTime;
     private EnemyBase currentTarget;
-    private float currentDamage;
-    private float currentFireRate;
-    private float currentRange;
 
     public override void Initialize(HexCoord coord)
     {
         base.Initialize(coord);
-        if (data != null && data.Levels.Count > 0)
+        if (sceneSettings == null)
         {
-            UpgradeToLevel(0);
+            Debug.LogError($"{name}: GameSceneConfiguration не назначен!");
+            return;
         }
+        UpdateHealthBar();
+    }
+
+    public override void TakeDamage(int amount)
+    {
+        base.TakeDamage(amount);
+        UpdateHealthBar();
+    }
+
+    public override void Upgrade()
+    {
+        base.Upgrade();
+        UpdateHealthBar();
     }
 
     private void Update()
     {
-        if (data == null) return;
+        if (!IsPlaced || sceneSettings == null) return;
 
-        if (currentTarget != null)
+        var turretModule = GetModule<TurretModule>();
+        if (turretModule == null || Time.time < nextFireTime) return;
+
+        if (currentTarget != null && currentTarget.gameObject.activeInHierarchy &&
+            Vector3.Distance(transform.position, currentTarget.transform.position) <= turretModule.LevelData[currentLevel].Range)
         {
-            if (Vector3.Distance(transform.position, currentTarget.transform.position) <= currentRange && currentTarget.gameObject.activeInHierarchy)
-            {
-                if (Time.time >= nextFireTime)
-                {
-                    Attack();
-                    nextFireTime = Time.time + (1f / currentFireRate);
-                }
-            }
-            else
-            {
-                currentTarget = null;
-            }
+            Fire(currentTarget);
         }
         else
         {
-            FindTarget();
+            FindTarget(turretModule.LevelData[currentLevel].Range);
         }
     }
 
-    private void Attack()
+    private void FindTarget(float range)
     {
-        if (currentTarget == null || !currentTarget.gameObject.activeInHierarchy || ProjectilePool.Instance == null)
-        {
-            return; 
-        }
+        currentTarget = null;
+        Collider[] hits = Physics.OverlapSphere(transform.position, range, sceneSettings.EnemyLayer);
+        float minDistance = float.MaxValue;
 
-        TurretProjectile projectile = ProjectilePool.Instance.GetProjectile();
-        projectile.transform.position = projectileSpawnPoint != null ? projectileSpawnPoint.position : transform.position;
-        projectile.Initialize(currentTarget, currentDamage);
-        Debug.Log($"Turret fires at {currentTarget.name} for {currentDamage} damage");
-    }
-
-    public void Upgrade()
-    {
-        if (currentLevel < data.Levels.Count - 1)
-        {
-            UpgradeToLevel(currentLevel + 1);
-        }
-    }
-
-    private void UpgradeToLevel(int level)
-    {
-        currentLevel = level;
-        var levelData = data.Levels[level];
-        currentDamage = levelData.Damage;
-        currentFireRate = levelData.FireRate;
-        currentRange = levelData.Range;
-    }
-
-    private void FindTarget()
-    {
-        Collider[] hits = Physics.OverlapSphere(transform.position, currentRange, enemyLayer);
         foreach (var hit in hits)
         {
-            EnemyBase enemy = hit.GetComponent<EnemyBase>();
-            if (enemy != null && enemy.gameObject.activeInHierarchy)
+            if (hit.TryGetComponent<EnemyBase>(out var enemy) && enemy.gameObject.activeInHierarchy)
             {
-                currentTarget = enemy;
-                return;
+                float distance = Vector3.Distance(transform.position, enemy.transform.position);
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    currentTarget = enemy;
+                }
             }
         }
+    }
+
+    private void Fire(EnemyBase target)
+    {
+        var turretModule = GetModule<TurretModule>();
+        if (turretModule == null) return;
+
+        var projectile = ProjectilePool.Instance.GetProjectile();
+        projectile.transform.position = transform.position;
+        projectile.GetComponent<TurretProjectile>().Initialize(target, turretModule.LevelData[currentLevel].Damage, turretModule.LevelData[currentLevel].ProjectileSpeed);
+
+        nextFireTime = Time.time + (1f / turretModule.LevelData[currentLevel].FireRate);
+    }
+
+    private void UpdateHealthBar()
+    {
+        var turretModule = GetModule<TurretModule>();
+        if (turretModule != null)
+        {
+            HealthBarManager.Instance?.ShowHealthBar(this, CurrentHealth, data.Levels[currentLevel].MaxHealth, true);
+        }
+    }
+
+    protected override void DestroyBuilding()
+    {
+        HealthBarManager.Instance?.HideHealthBar(this);
+        base.DestroyBuilding();
     }
 }

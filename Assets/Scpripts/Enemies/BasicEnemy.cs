@@ -1,64 +1,81 @@
 ﻿using UnityEngine;
 using UnityEngine.AI;
-
+using System.Collections;
+//Обычный враг - идёт по плоскости, уничтожает все здания на своём пути, финальная цель - штаб.
 [RequireComponent(typeof(NavMeshAgent))]
 public class BasicEnemy : EnemyBase
 {
     private NavMeshAgent agent;
-    private Vector3 targetPosition; // Позиция штаба
-    private BuildingBase currentTarget; // Текущая цель 
-    [SerializeField] private LayerMask buildingLayer;
+    private Vector3 hqPosition;
+    private BuildingBase currentTarget;
 
     public override void Initialize()
     {
         base.Initialize();
+        if (sceneSettings == null) return; 
+
         agent = GetComponent<NavMeshAgent>();
         if (agent == null)
         {
-            Debug.LogWarning($"{name}: NavMeshAgent is missing!");
+            Debug.LogWarning($"{name}: нет NavMeshAgent!");
             return;
         }
-        agent.speed = data.Speed;
+        agent.speed = data?.Speed ?? 3f;
         agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
 
-        var hexGrid = FindObjectOfType<HexGrid>();
-        if (hexGrid != null)
+        var hexGrid = FindFirstObjectByType<HexGrid>();
+        if (hexGrid?.GetHeadquarters() != null)
         {
-            var hq = hexGrid.GetHeadquarters();
-            if (hq != null)
-            {
-                targetPosition = hq.Position;
-            }
+            hqPosition = hexGrid.GetHeadquarters().Position;
         }
+        else
+        {
+            Debug.LogWarning($"{name}: цель не нашли!");
+        }
+    }
+
+    private void OnEnable()
+    {     
+            StartCoroutine(WaitAndMove());
+    }
+
+    private IEnumerator WaitAndMove()
+    {
+        yield return null;
+            Move();
+            Debug.Log($"{name}: начал двигаться");
     }
 
     private void Update()
     {
-        if (data == null || agent == null) return;
+        if (data == null || agent == null || !agent.isOnNavMesh || !gameObject.activeInHierarchy) return;
 
         if (currentTarget != null)
         {
-            // Проверяем, жива ли цель
-            if (!currentTarget.gameObject.activeInHierarchy)
+            try
             {
-                currentTarget = null;
-                agent.isStopped = false;
-                CheckForBuildings();
-                Move();
-            }
-            else if (Vector3.Distance(transform.position, currentTarget.Position) <= GetAttackRange())
-            {
-                agent.isStopped = true; 
-                if (CanAttack())
+                if (!currentTarget.gameObject.activeInHierarchy)
                 {
-                    AttackTarget(currentTarget);
-                    ResetAttackTimer();
+                    ResetTarget();
+                }
+                else if (Vector3.Distance(transform.position, currentTarget.Position) <= GetEffectiveAttackRange(currentTarget))
+                {
+                    agent.isStopped = true;
+                    if (CanAttack())
+                    {
+                        AttackTarget(currentTarget);
+                        ResetAttackTimer();
+                    }
+                }
+                else
+                {
+                    agent.isStopped = false;
+                    Move();
                 }
             }
-            else
+            catch
             {
-                agent.isStopped = false;
-                Move();
+                ResetTarget();
             }
         }
         else
@@ -70,44 +87,102 @@ public class BasicEnemy : EnemyBase
 
     protected override void Move()
     {
-        if (data == null || agent == null) return;
+        if (data == null || agent == null || !agent.isOnNavMesh) return;
 
-        Vector3 destination = currentTarget != null ? currentTarget.Position : targetPosition;
-        if (agent.destination != destination)
+        Vector3 dest = currentTarget != null ? currentTarget.Position : hqPosition;
+        if (agent.destination != dest)
         {
-            Vector3 offset = Random.insideUnitCircle * GetAttackRange(); 
-            agent.SetDestination(destination + new Vector3(offset.x, 0f, offset.y));
+            float range = currentTarget != null ? GetEffectiveAttackRange(currentTarget) : GetAttackRange();
+            Vector3 offset = Random.insideUnitCircle * range;
+            agent.SetDestination(dest + new Vector3(offset.x, 0f, offset.y));
         }
     }
 
     protected override void AttackTarget(BuildingBase target)
     {
-        if (data == null) return;
-        target.TakeDamage(data.Damage);
-        Debug.Log($"Enemy attacks {target.name} for {data.Damage} damage");
+        if (data == null || target == null) return;
+        int effectiveDamage = data.Damage;
+
+        target.TakeDamage(effectiveDamage);
+        Debug.Log($"Враг атакует здание: {target.name}, нанося {effectiveDamage} урона");
     }
 
     private void CheckForBuildings()
     {
-        if (data == null) return;
-        Collider[] hits = Physics.OverlapSphere(transform.position, GetDetectionRange(), buildingLayer);
-        BuildingBase closestBuilding = null;
-        float minDistance = float.MaxValue;
+        if (data == null || sceneSettings == null) return;
+
+        Collider[] hits = Physics.OverlapSphere(transform.position, GetDetectionRange(), sceneSettings.BuildingLayer);
+        BuildingBase closest = null;
+        float minDist = float.MaxValue;
+        Vector3 dirToHQ = (hqPosition - transform.position).normalized;
 
         foreach (var hit in hits)
         {
-            BuildingBase building = hit.GetComponent<BuildingBase>();
-            if (building != null && building.gameObject.activeInHierarchy)
+            if (!hit.TryGetComponent<BuildingBase>(out var building) || !building.gameObject.activeInHierarchy) continue;
+
+            float dist = Vector3.Distance(transform.position, building.Position);
+            float distToHQ = Vector3.Distance(transform.position, hqPosition);
+            if (dist < minDist && dist <= distToHQ)
             {
-                float distance = Vector3.Distance(transform.position, building.Position);
-                if (distance < minDistance)
+                Vector3 dirToBuilding = (building.Position - transform.position).normalized;
+                if (Vector3.Angle(dirToHQ, dirToBuilding) <= 90f) // чтобы уничтожал только те здания, которые стоят у него на пути
                 {
-                    minDistance = distance;
-                    closestBuilding = building;
+                    minDist = dist;
+                    closest = building;
                 }
             }
         }
 
-        currentTarget = closestBuilding;
+        SetTarget(closest);
+    }
+
+    protected float GetEffectiveAttackRange(BuildingBase target)
+    {
+        float baseRange = GetAttackRange();
+        if (target is Headquarters) return baseRange * 4f;
+        return baseRange;
+    }
+
+    private void SetTarget(BuildingBase newTarget)
+    {
+        if (currentTarget != null)
+        {
+            currentTarget.OnBuildingDestroyed.RemoveListener(ResetTarget);
+        }
+        currentTarget = newTarget;
+        if (currentTarget != null)
+        {
+            currentTarget.OnBuildingDestroyed.AddListener(ResetTarget);
+            Debug.Log($"{name}: Новая ццель: {currentTarget.name}");
+        }
+    }
+     
+    private void ResetTarget()
+    {
+        if (currentTarget != null)
+        {
+            currentTarget.OnBuildingDestroyed.RemoveListener(ResetTarget);
+            currentTarget = null;
+        }
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.isStopped = false;
+            CheckForBuildings();
+            Move();
+        }
+    }
+
+    protected override void Deactivate()
+    {
+        if (currentTarget != null)
+        {
+            currentTarget.OnBuildingDestroyed.RemoveListener(ResetTarget);
+            currentTarget = null;
+        }
+        if (agent != null && agent.isOnNavMesh)
+        {
+            agent.isStopped = true; 
+        }
+        base.Deactivate();
     }
 }

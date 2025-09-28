@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cfc65529ade3d3c49bce9ea70dd838b2, type: 3}
+  m_Name: SceneSettings
+  m_EditorClassIdentifier: 
+  gridRadius: 16
+  cellSize: 0.8
+  gridLineMaterial: {fileID: 2100000, guid: da51538fcfb968b4ca7795603b458b1c, type: 2}
+  buildingScaleFactor: 1
+  headquartersPrefab: {fileID: 4586149246020124188, guid: 5eb7e9340ad97d74eb2dd98c58ab9544, type: 3}
+  previewValidMaterial: {fileID: 2100000, guid: de89c1197ed918849a2367c164f5a35a, type: 2}
+  previewInvalidMaterial: {fileID: 2100000, guid: fc5661b63fae7ae46a7408016a241813, type: 2}
+  startingCurrency: 1000
+  sellPriceMultiplier: 0.8
+  buildingLayer:
+    serializedVersion: 2
+    m_Bits: 64
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 128
+  spawnRadius: 2
